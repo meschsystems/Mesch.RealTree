@@ -153,3 +153,22 @@ public delegate Task BulkItemsAddedEventDelegate(BulkAddItemContext context);
 /// <param name="context">Context containing details about the bulk removal.</param>
 /// <returns>A task representing the asynchronous event handling.</returns>
 public delegate Task BulkNodesRemovedEventDelegate(BulkRemoveContext context);
+
+/// <summary>
+/// Delegate for middleware actions that execute when container contents are being listed.
+/// Can intercept, modify, or cancel the listing operation.
+/// </summary>
+/// <param name="context">The context containing information about the listing operation.</param>
+/// <param name="cancellationToken">The cancellation token for the operation.</param>
+/// <returns>A task that represents the completion of the action.</returns>
+public delegate Task ListContainerDelegate(ListContainerContext context, CancellationToken cancellationToken);
+
+/// <summary>
+/// Delegate for event handlers that execute after container contents have been listed.
+/// These are notification events that run after the listing operation completes.
+/// </summary>
+/// <param name="context">The context containing information about the completed listing operation.</param>
+/// <param name="result">The collection of nodes that were returned from the listing operation.</param>
+/// <param name="cancellationToken">The cancellation token for the operation.</param>
+/// <returns>A task that represents the completion of the event handler.</returns>
+public delegate Task ContainerListedEventDelegate(ListContainerContext context, IReadOnlyList<IRealTreeNode> result, CancellationToken cancellationToken);

@@ -7,21 +7,29 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
 {
     private readonly List<IRealTreeContainer> _containers = new List<IRealTreeContainer>();
 
-    // Action delegates (middleware)
+#region Action delegates (middleware)
+
     private readonly List<AddContainerDelegate> _addContainerActions = new List<AddContainerDelegate>();
     private readonly List<RemoveContainerDelegate> _removeContainerActions = new List<RemoveContainerDelegate>();
     private readonly List<UpdateNodeDelegate> _updateActions = new List<UpdateNodeDelegate>();
     private readonly List<MoveNodeDelegate> _moveActions = new List<MoveNodeDelegate>();
     private readonly List<BulkAddContainerDelegate> _bulkAddContainerActions = new List<BulkAddContainerDelegate>();
     private readonly List<BulkRemoveContainerDelegate> _bulkRemoveActions = new List<BulkRemoveContainerDelegate>();
+    private readonly List<ListContainerDelegate> _listContainerActions = new List<ListContainerDelegate>();
 
-    // Event delegates (notifications)
+    #endregion
+
+    #region Event delegates (notifications)
+
     private readonly List<ContainerAddedEventDelegate> _containerAddedEvents = new List<ContainerAddedEventDelegate>();
     private readonly List<ContainerRemovedEventDelegate> _containerRemovedEvents = new List<ContainerRemovedEventDelegate>();
     private readonly List<NodeUpdatedEventDelegate> _nodeUpdatedEvents = new List<NodeUpdatedEventDelegate>();
     private readonly List<NodeMovedEventDelegate> _nodeMovedEvents = new List<NodeMovedEventDelegate>();
     private readonly List<BulkContainersAddedEventDelegate> _bulkContainersAddedEvents = new List<BulkContainersAddedEventDelegate>();
     private readonly List<BulkNodesRemovedEventDelegate> _bulkNodesRemovedEvents = new List<BulkNodesRemovedEventDelegate>();
+    private readonly List<ContainerListedEventDelegate> _containerListedEvents = new List<ContainerListedEventDelegate>();
+
+    #endregion
 
     public IReadOnlyList<IRealTreeContainer> Containers => _containers.AsReadOnly();
 
@@ -29,39 +37,50 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
 
     public RealTreeItem(Guid? id = null, string? name = null) : base(id, name) { }
 
-    // Action registration methods (middleware)
+#region Action registration methods (middleware)
     public void RegisterAddContainerAction(AddContainerDelegate handler) => _addContainerActions.Add(handler);
     public void RegisterRemoveContainerAction(RemoveContainerDelegate handler) => _removeContainerActions.Add(handler);
     public void RegisterUpdateAction(UpdateNodeDelegate handler) => _updateActions.Add(handler);
     public void RegisterMoveAction(MoveNodeDelegate handler) => _moveActions.Add(handler);
     public void RegisterBulkAddContainerAction(BulkAddContainerDelegate handler) => _bulkAddContainerActions.Add(handler);
     public void RegisterBulkRemoveAction(BulkRemoveContainerDelegate handler) => _bulkRemoveActions.Add(handler);
+    public void RegisterListContainerAction(ListContainerDelegate handler) => _listContainerActions.Add(handler);
 
-    // Action unregistration methods
+    #endregion
+
+    #region Action unregistration methods
     public bool UnregisterAddContainerAction(AddContainerDelegate handler) => _addContainerActions.Remove(handler);
     public bool UnregisterRemoveContainerAction(RemoveContainerDelegate handler) => _removeContainerActions.Remove(handler);
     public bool UnregisterUpdateAction(UpdateNodeDelegate handler) => _updateActions.Remove(handler);
     public bool UnregisterMoveAction(MoveNodeDelegate handler) => _moveActions.Remove(handler);
     public bool UnregisterBulkAddContainerAction(BulkAddContainerDelegate handler) => _bulkAddContainerActions.Remove(handler);
     public bool UnregisterBulkRemoveAction(BulkRemoveContainerDelegate handler) => _bulkRemoveActions.Remove(handler);
+    public bool UnregisterListContainerAction(ListContainerDelegate handler) => _listContainerActions.Remove(handler);
+    #endregion
 
-    // Event registration methods (notifications)
+    #region Event registration methods (notifications)
     public void RegisterContainerAddedEvent(ContainerAddedEventDelegate handler) => _containerAddedEvents.Add(handler);
     public void RegisterContainerRemovedEvent(ContainerRemovedEventDelegate handler) => _containerRemovedEvents.Add(handler);
     public void RegisterNodeUpdatedEvent(NodeUpdatedEventDelegate handler) => _nodeUpdatedEvents.Add(handler);
     public void RegisterNodeMovedEvent(NodeMovedEventDelegate handler) => _nodeMovedEvents.Add(handler);
     public void RegisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler) => _bulkContainersAddedEvents.Add(handler);
     public void RegisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler) => _bulkNodesRemovedEvents.Add(handler);
+    public void RegisterContainerListedEvent(ContainerListedEventDelegate handler) => _containerListedEvents.Add(handler);
 
-    // Event unregistration methods
+    #endregion
+
+    #region Event unregistration methods
     public bool UnregisterContainerAddedEvent(ContainerAddedEventDelegate handler) => _containerAddedEvents.Remove(handler);
     public bool UnregisterContainerRemovedEvent(ContainerRemovedEventDelegate handler) => _containerRemovedEvents.Remove(handler);
     public bool UnregisterNodeUpdatedEvent(NodeUpdatedEventDelegate handler) => _nodeUpdatedEvents.Remove(handler);
     public bool UnregisterNodeMovedEvent(NodeMovedEventDelegate handler) => _nodeMovedEvents.Remove(handler);
     public bool UnregisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler) => _bulkContainersAddedEvents.Remove(handler);
     public bool UnregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler) => _bulkNodesRemovedEvents.Remove(handler);
+    public bool UnregisterContainerListedEvent(ContainerListedEventDelegate handler) => _containerListedEvents.Remove(handler);
 
-    // Action collections for operations service access
+    #endregion
+
+    #region Action collections for operations service access
 
     /// <summary>
     /// Gets the collection of registered add container action handlers for internal operations service access.
@@ -93,7 +112,14 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     /// </summary>
     public IReadOnlyList<BulkRemoveContainerDelegate> BulkRemoveActions => _bulkRemoveActions.AsReadOnly();
 
-    // Event collections for operations service access
+    /// <summary>
+    /// Gets the collection of registered list container action handlers for internal operations service access.
+    /// </summary>
+    public IReadOnlyList<ListContainerDelegate> ListContainerActions => _listContainerActions.AsReadOnly();
+
+    #endregion
+
+    #region Event collections for operations service access
 
     /// <summary>
     /// Gets the collection of registered container added event handlers for internal operations service access.
@@ -125,6 +151,10 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     /// </summary>
     public IReadOnlyList<BulkNodesRemovedEventDelegate> BulkNodesRemovedEvents => _bulkNodesRemovedEvents.AsReadOnly();
 
+    /// <summary>
+    /// Gets the collection of registered container listed event handlers for internal operations service access.
+    /// </summary>
+    public IReadOnlyList<ContainerListedEventDelegate> ContainerListedEvents => _containerListedEvents.AsReadOnly();
 
     public void AddContainer(IRealTreeContainer container)
     {
@@ -137,4 +167,6 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
         _containers.Remove(container);
         ((RealTreeNodeBase)container).SetParent(null);
     }
+
+    #endregion
 }

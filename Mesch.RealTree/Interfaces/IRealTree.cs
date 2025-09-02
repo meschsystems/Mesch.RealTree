@@ -25,7 +25,7 @@ public interface IRealTree : IRealTreeNode, IDisposable
     /// <returns>The node with the specified ID, or null if not found.</returns>
     IRealTreeNode? FindById(Guid id);
 
-    // Global action registration at tree level (middleware)
+    #region Global action registration at tree level (middleware)
 
     /// <summary>
     /// Registers a global middleware action for all container additions in the entire tree.
@@ -81,7 +81,15 @@ public interface IRealTree : IRealTreeNode, IDisposable
     /// <param name="handler">The action handler to register globally.</param>
     void RegisterBulkRemoveAction(BulkRemoveContainerDelegate handler);
 
-    // Global action unregistration at tree level
+    /// <summary>
+    /// Registers a global middleware action for all container listing operations in the entire tree.
+    /// </summary>
+    /// <param name="handler">The action handler to register globally.</param>
+    void RegisterListContainerAction(ListContainerDelegate handler);
+
+#endregion
+
+    #region Global action unregistration at tree level
 
     /// <summary>
     /// Unregisters a previously registered global add container action.
@@ -146,7 +154,16 @@ public interface IRealTree : IRealTreeNode, IDisposable
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
     bool UnregisterBulkRemoveAction(BulkRemoveContainerDelegate handler);
 
-    // Global event registration at tree level (notifications)
+    /// <summary>
+    /// Unregisters a previously registered global list container action.
+    /// </summary>
+    /// <param name="handler">The action handler to unregister.</param>
+    /// <returns>True if the handler was found and removed; otherwise, false.</returns>
+    bool UnregisterListContainerAction(ListContainerDelegate handler);
+
+    #endregion
+
+    #region Global event registration at tree level (notifications)
 
     /// <summary>
     /// Registers a global event handler for all container additions in the entire tree.
@@ -202,7 +219,15 @@ public interface IRealTree : IRealTreeNode, IDisposable
     /// <param name="handler">The event handler to register globally.</param>
     void RegisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler);
 
-    // Global event unregistration at tree level
+    /// <summary>
+    /// Registers a global event handler for all container listing operations in the entire tree.
+    /// </summary>
+    /// <param name="handler">The event handler to register globally.</param>
+    void RegisterContainerListedEvent(ContainerListedEventDelegate handler);
+
+    #endregion
+
+    #region Global event unregistration at tree level
 
     /// <summary>
     /// Unregisters a previously registered global container added event handler.
@@ -266,4 +291,13 @@ public interface IRealTree : IRealTreeNode, IDisposable
     /// <param name="handler">The event handler to unregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
     bool UnregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler);
+
+    /// <summary>
+    /// Unregisters a previously registered global container listed event handler.
+    /// </summary>
+    /// <param name="handler">The event handler to unregister.</param>
+    /// <returns>True if the handler was found and removed; otherwise, false.</returns>
+    bool UnregisterContainerListedEvent(ContainerListedEventDelegate handler);
+
+    #endregion
 }

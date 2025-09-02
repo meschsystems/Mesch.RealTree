@@ -45,7 +45,7 @@ public interface IRealTreeContainer : IRealTreeNode
     /// <param name="item">The item to remove.</param>
     void RemoveItem(IRealTreeItem item);
 
-    // Action registration methods (middleware - can intercept/modify operations)
+    #region Action registration methods (middleware - can intercept/modify operations)
 
     /// <summary>
     /// Registers a middleware action that executes when containers are added to this node or its descendants.
@@ -102,7 +102,15 @@ public interface IRealTreeContainer : IRealTreeNode
     /// <param name="handler">The action handler to register.</param>
     void RegisterBulkRemoveAction(BulkRemoveContainerDelegate handler);
 
-    // Action unregistration methods
+    /// <summary>
+    /// Registers a middleware action that executes when this container's contents are being listed.
+    /// </summary>
+    /// <param name="handler">The action handler to register.</param>
+    void RegisterListContainerAction(ListContainerDelegate handler);
+
+    #endregion
+
+    #region Action unregistration methods
 
     /// <summary>
     /// Unregisters a previously registered add container action.
@@ -167,7 +175,16 @@ public interface IRealTreeContainer : IRealTreeNode
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
     bool UnregisterBulkRemoveAction(BulkRemoveContainerDelegate handler);
 
-    // Event registration methods (notifications - called after operations complete)
+    /// <summary>
+    /// Unregisters a previously registered list container action.
+    /// </summary>
+    /// <param name="handler">The action handler to unregister.</param>
+    /// <returns>True if the handler was found and removed; otherwise, false.</returns>
+    bool UnregisterListContainerAction(ListContainerDelegate handler);
+
+    #endregion
+
+    #region Event registration methods (notifications - called after operations complete)
 
     /// <summary>
     /// Registers an event handler that executes after containers are added to this subtree.
@@ -224,7 +241,15 @@ public interface IRealTreeContainer : IRealTreeNode
     /// <param name="handler">The event handler to register.</param>
     void RegisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler);
 
-    // Event unregistration methods
+    /// <summary>
+    /// Registers an event handler that executes after this container's contents have been listed.
+    /// </summary>
+    /// <param name="handler">The event handler to register.</param>
+    void RegisterContainerListedEvent(ContainerListedEventDelegate handler);
+
+    #endregion
+
+    #region Event unregistration methods
 
     /// <summary>
     /// Unregisters a previously registered container added event handler.
@@ -288,4 +313,13 @@ public interface IRealTreeContainer : IRealTreeNode
     /// <param name="handler">The event handler to unregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
     bool UnregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler);
+
+    /// <summary>
+    /// Unregisters a previously registered container listed event handler.
+    /// </summary>
+    /// <param name="handler">The event handler to unregister.</param>
+    /// <returns>True if the handler was found and removed; otherwise, false.</returns>
+    bool UnregisterContainerListedEvent(ContainerListedEventDelegate handler);
+
+    #endregion
 }
