@@ -91,6 +91,15 @@ public delegate Task UpdateNodeDelegate(UpdateContext context, Func<Task> next);
 public delegate Task MoveNodeDelegate(MoveContext context, Func<Task> next);
 
 /// <summary>
+/// Delegate for middleware actions that execute when container contents are being listed.
+/// Can intercept, modify, or cancel the listing operation.
+/// </summary>
+/// <param name="context">The context containing information about the listing operation.</param>
+/// <param name="next">The next handler in the pipeline.</param>
+/// <returns>A task that represents the completion of the action.</returns>
+public delegate Task ListContainerDelegate(ListContainerContext context, Func<Task> next);
+
+/// <summary>
 /// Event delegate that executes after a container has been successfully added.
 /// Events are fire-and-forget and execute in parallel.
 /// </summary>
@@ -153,15 +162,6 @@ public delegate Task BulkItemsAddedEventDelegate(BulkAddItemContext context);
 /// <param name="context">Context containing details about the bulk removal.</param>
 /// <returns>A task representing the asynchronous event handling.</returns>
 public delegate Task BulkNodesRemovedEventDelegate(BulkRemoveContext context);
-
-/// <summary>
-/// Delegate for middleware actions that execute when container contents are being listed.
-/// Can intercept, modify, or cancel the listing operation.
-/// </summary>
-/// <param name="context">The context containing information about the listing operation.</param>
-/// <param name="cancellationToken">The cancellation token for the operation.</param>
-/// <returns>A task that represents the completion of the action.</returns>
-public delegate Task ListContainerDelegate(ListContainerContext context, CancellationToken cancellationToken);
 
 /// <summary>
 /// Delegate for event handlers that execute after container contents have been listed.
