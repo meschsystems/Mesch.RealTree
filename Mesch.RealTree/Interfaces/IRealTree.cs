@@ -87,7 +87,7 @@ public interface IRealTree : IRealTreeNode, IDisposable
     /// <param name="handler">The action handler to register globally.</param>
     void RegisterListContainerAction(ListContainerDelegate handler);
 
-#endregion
+    #endregion
 
     #region Global action deregistration at tree level
 

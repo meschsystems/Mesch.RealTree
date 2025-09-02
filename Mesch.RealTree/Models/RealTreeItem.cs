@@ -7,7 +7,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
 {
     private readonly List<IRealTreeContainer> _containers = new List<IRealTreeContainer>();
 
-#region Action delegates (middleware)
+    #region Action delegates (middleware)
 
     private readonly List<AddContainerDelegate> _addContainerActions = new List<AddContainerDelegate>();
     private readonly List<RemoveContainerDelegate> _removeContainerActions = new List<RemoveContainerDelegate>();
@@ -37,7 +37,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
 
     public RealTreeItem(Guid? id = null, string? name = null) : base(id, name) { }
 
-#region Action registration methods (middleware)
+    #region Action registration methods (middleware)
     public void RegisterAddContainerAction(AddContainerDelegate handler) => _addContainerActions.Add(handler);
     public void RegisterRemoveContainerAction(RemoveContainerDelegate handler) => _removeContainerActions.Add(handler);
     public void RegisterUpdateAction(UpdateNodeDelegate handler) => _updateActions.Add(handler);
