@@ -1,0 +1,7 @@
+{
+    "packageName": "Mesch.RealTree",
+    "localNugetPath": "C:\\GitHub\\MeschSystems\\LocalNuget",
+    "dependentProjects": [
+        "C:\\GitHub\\MeschSystems\\Mesch.Shell"
+    ]
+}
