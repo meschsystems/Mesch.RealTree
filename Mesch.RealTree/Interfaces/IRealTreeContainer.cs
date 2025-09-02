@@ -110,77 +110,77 @@ public interface IRealTreeContainer : IRealTreeNode
 
     #endregion
 
-    #region Action unregistration methods
+    #region Action deregistration methods
 
     /// <summary>
-    /// Unregisters a previously registered add container action.
+    /// Deregisters a previously registered add container action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterAddContainerAction(AddContainerDelegate handler);
+    bool DeregisterAddContainerAction(AddContainerDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered remove container action.
+    /// Deregisters a previously registered remove container action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterRemoveContainerAction(RemoveContainerDelegate handler);
+    bool DeregisterRemoveContainerAction(RemoveContainerDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered add item action.
+    /// Deregisters a previously registered add item action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterAddItemAction(AddItemDelegate handler);
+    bool DeregisterAddItemAction(AddItemDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered remove item action.
+    /// Deregisters a previously registered remove item action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterRemoveItemAction(RemoveItemDelegate handler);
+    bool DeregisterRemoveItemAction(RemoveItemDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered update action.
+    /// Deregisters a previously registered update action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterUpdateAction(UpdateNodeDelegate handler);
+    bool DeregisterUpdateAction(UpdateNodeDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered move action.
+    /// Deregisters a previously registered move action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterMoveAction(MoveNodeDelegate handler);
+    bool DeregisterMoveAction(MoveNodeDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered bulk add container action.
+    /// Deregisters a previously registered bulk add container action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterBulkAddContainerAction(BulkAddContainerDelegate handler);
+    bool DeregisterBulkAddContainerAction(BulkAddContainerDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered bulk add item action.
+    /// Deregisters a previously registered bulk add item action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterBulkAddItemAction(BulkAddItemDelegate handler);
+    bool DeregisterBulkAddItemAction(BulkAddItemDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered bulk remove action.
+    /// Deregisters a previously registered bulk remove action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterBulkRemoveAction(BulkRemoveContainerDelegate handler);
+    bool DeregisterBulkRemoveAction(BulkRemoveContainerDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered list container action.
+    /// Deregisters a previously registered list container action.
     /// </summary>
-    /// <param name="handler">The action handler to unregister.</param>
+    /// <param name="handler">The action handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterListContainerAction(ListContainerDelegate handler);
+    bool DeregisterListContainerAction(ListContainerDelegate handler);
 
     #endregion
 
@@ -249,77 +249,77 @@ public interface IRealTreeContainer : IRealTreeNode
 
     #endregion
 
-    #region Event unregistration methods
+    #region Event deregistration methods
 
     /// <summary>
-    /// Unregisters a previously registered container added event handler.
+    /// Deregisters a previously registered container added event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterContainerAddedEvent(ContainerAddedEventDelegate handler);
+    bool DeregisterContainerAddedEvent(ContainerAddedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered container removed event handler.
+    /// Deregisters a previously registered container removed event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterContainerRemovedEvent(ContainerRemovedEventDelegate handler);
+    bool DeregisterContainerRemovedEvent(ContainerRemovedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered item added event handler.
+    /// Deregisters a previously registered item added event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterItemAddedEvent(ItemAddedEventDelegate handler);
+    bool DeregisterItemAddedEvent(ItemAddedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered item removed event handler.
+    /// Deregisters a previously registered item removed event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterItemRemovedEvent(ItemRemovedEventDelegate handler);
+    bool DeregisterItemRemovedEvent(ItemRemovedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered node updated event handler.
+    /// Deregisters a previously registered node updated event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterNodeUpdatedEvent(NodeUpdatedEventDelegate handler);
+    bool DeregisterNodeUpdatedEvent(NodeUpdatedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered node moved event handler.
+    /// Deregisters a previously registered node moved event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterNodeMovedEvent(NodeMovedEventDelegate handler);
+    bool DeregisterNodeMovedEvent(NodeMovedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered bulk containers added event handler.
+    /// Deregisters a previously registered bulk containers added event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler);
+    bool DeregisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered bulk items added event handler.
+    /// Deregisters a previously registered bulk items added event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterBulkItemsAddedEvent(BulkItemsAddedEventDelegate handler);
+    bool DeregisterBulkItemsAddedEvent(BulkItemsAddedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered bulk nodes removed event handler.
+    /// Deregisters a previously registered bulk nodes removed event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler);
+    bool DeregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler);
 
     /// <summary>
-    /// Unregisters a previously registered container listed event handler.
+    /// Deregisters a previously registered container listed event handler.
     /// </summary>
-    /// <param name="handler">The event handler to unregister.</param>
+    /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
-    bool UnregisterContainerListedEvent(ContainerListedEventDelegate handler);
+    bool DeregisterContainerListedEvent(ContainerListedEventDelegate handler);
 
     #endregion
 }

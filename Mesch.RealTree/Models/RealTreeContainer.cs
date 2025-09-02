@@ -57,17 +57,17 @@ public class RealTreeContainer : RealTreeNodeBase, IRealTreeContainer
     public void RegisterBulkRemoveAction(BulkRemoveContainerDelegate handler) => _bulkRemoveActions.Add(handler);
     public void RegisterListContainerAction(ListContainerDelegate handler) => _listContainerActions.Add(handler);
 
-    #region Action unregistration methods
-    public bool UnregisterAddContainerAction(AddContainerDelegate handler) => _addContainerActions.Remove(handler);
-    public bool UnregisterRemoveContainerAction(RemoveContainerDelegate handler) => _removeContainerActions.Remove(handler);
-    public bool UnregisterAddItemAction(AddItemDelegate handler) => _addItemActions.Remove(handler);
-    public bool UnregisterRemoveItemAction(RemoveItemDelegate handler) => _removeItemActions.Remove(handler);
-    public bool UnregisterUpdateAction(UpdateNodeDelegate handler) => _updateActions.Remove(handler);
-    public bool UnregisterMoveAction(MoveNodeDelegate handler) => _moveActions.Remove(handler);
-    public bool UnregisterBulkAddContainerAction(BulkAddContainerDelegate handler) => _bulkAddContainerActions.Remove(handler);
-    public bool UnregisterBulkAddItemAction(BulkAddItemDelegate handler) => _bulkAddItemActions.Remove(handler);
-    public bool UnregisterBulkRemoveAction(BulkRemoveContainerDelegate handler) => _bulkRemoveActions.Remove(handler);
-    public bool UnregisterListContainerAction(ListContainerDelegate handler) => _listContainerActions.Remove(handler);
+    #region Action deregistration methods
+    public bool DeregisterAddContainerAction(AddContainerDelegate handler) => _addContainerActions.Remove(handler);
+    public bool DeregisterRemoveContainerAction(RemoveContainerDelegate handler) => _removeContainerActions.Remove(handler);
+    public bool DeregisterAddItemAction(AddItemDelegate handler) => _addItemActions.Remove(handler);
+    public bool DeregisterRemoveItemAction(RemoveItemDelegate handler) => _removeItemActions.Remove(handler);
+    public bool DeregisterUpdateAction(UpdateNodeDelegate handler) => _updateActions.Remove(handler);
+    public bool DeregisterMoveAction(MoveNodeDelegate handler) => _moveActions.Remove(handler);
+    public bool DeregisterBulkAddContainerAction(BulkAddContainerDelegate handler) => _bulkAddContainerActions.Remove(handler);
+    public bool DeregisterBulkAddItemAction(BulkAddItemDelegate handler) => _bulkAddItemActions.Remove(handler);
+    public bool DeregisterBulkRemoveAction(BulkRemoveContainerDelegate handler) => _bulkRemoveActions.Remove(handler);
+    public bool DeregisterListContainerAction(ListContainerDelegate handler) => _listContainerActions.Remove(handler);
 
     #endregion
 
@@ -85,17 +85,17 @@ public class RealTreeContainer : RealTreeNodeBase, IRealTreeContainer
 
     #endregion
 
-    #region Event unregistration methods
-    public bool UnregisterContainerAddedEvent(ContainerAddedEventDelegate handler) => _containerAddedEvents.Remove(handler);
-    public bool UnregisterContainerRemovedEvent(ContainerRemovedEventDelegate handler) => _containerRemovedEvents.Remove(handler);
-    public bool UnregisterItemAddedEvent(ItemAddedEventDelegate handler) => _itemAddedEvents.Remove(handler);
-    public bool UnregisterItemRemovedEvent(ItemRemovedEventDelegate handler) => _itemRemovedEvents.Remove(handler);
-    public bool UnregisterNodeUpdatedEvent(NodeUpdatedEventDelegate handler) => _nodeUpdatedEvents.Remove(handler);
-    public bool UnregisterNodeMovedEvent(NodeMovedEventDelegate handler) => _nodeMovedEvents.Remove(handler);
-    public bool UnregisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler) => _bulkContainersAddedEvents.Remove(handler);
-    public bool UnregisterBulkItemsAddedEvent(BulkItemsAddedEventDelegate handler) => _bulkItemsAddedEvents.Remove(handler);
-    public bool UnregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler) => _bulkNodesRemovedEvents.Remove(handler);
-    public bool UnregisterContainerListedEvent(ContainerListedEventDelegate handler) => _containerListedEvents.Remove(handler);
+    #region Event deregistration methods
+    public bool DeregisterContainerAddedEvent(ContainerAddedEventDelegate handler) => _containerAddedEvents.Remove(handler);
+    public bool DeregisterContainerRemovedEvent(ContainerRemovedEventDelegate handler) => _containerRemovedEvents.Remove(handler);
+    public bool DeregisterItemAddedEvent(ItemAddedEventDelegate handler) => _itemAddedEvents.Remove(handler);
+    public bool DeregisterItemRemovedEvent(ItemRemovedEventDelegate handler) => _itemRemovedEvents.Remove(handler);
+    public bool DeregisterNodeUpdatedEvent(NodeUpdatedEventDelegate handler) => _nodeUpdatedEvents.Remove(handler);
+    public bool DeregisterNodeMovedEvent(NodeMovedEventDelegate handler) => _nodeMovedEvents.Remove(handler);
+    public bool DeregisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler) => _bulkContainersAddedEvents.Remove(handler);
+    public bool DeregisterBulkItemsAddedEvent(BulkItemsAddedEventDelegate handler) => _bulkItemsAddedEvents.Remove(handler);
+    public bool DeregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler) => _bulkNodesRemovedEvents.Remove(handler);
+    public bool DeregisterContainerListedEvent(ContainerListedEventDelegate handler) => _containerListedEvents.Remove(handler);
 
     #endregion
 
