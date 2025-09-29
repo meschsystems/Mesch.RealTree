@@ -79,7 +79,11 @@ public class RealTreeOperations : IRealTreeOperations
         return item;
     }
 
-    public async Task RemoveAsync(IRealTreeNode node, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
+    public async Task RemoveAsync(
+        IRealTreeNode node, 
+        bool triggerActions = true,
+        bool triggerEvents = true, 
+        CancellationToken cancellationToken = default)
     {
         var context = new RemoveContext(node, node.Parent, node.Tree, cancellationToken);
 
@@ -101,13 +105,17 @@ public class RealTreeOperations : IRealTreeOperations
 
         if (triggerEvents)
         {
-            if (node is IRealTreeContainer)
+            // Only collect events from parent if parent exists
+            if (context.Parent != null)
             {
-                await ExecuteEvents(context, node, n => GetContainerRemovedEvents(n));
-            }
-            else
-            {
-                await ExecuteEvents(context, node, n => GetItemRemovedEvents(n));
+                if (node is IRealTreeContainer)
+                {
+                    await ExecuteEvents(context, context.Parent, n => GetContainerRemovedEvents(n));
+                }
+                else
+                {
+                    await ExecuteEvents(context, context.Parent, n => GetItemRemovedEvents(n));
+                }
             }
         }
     }

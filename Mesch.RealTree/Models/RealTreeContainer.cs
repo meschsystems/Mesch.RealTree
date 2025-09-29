@@ -41,7 +41,7 @@ public class RealTreeContainer : RealTreeNodeBase, IRealTreeContainer
     public virtual IReadOnlyList<IRealTreeItem> Items => _items.AsReadOnly();
     public virtual IReadOnlyList<IRealTreeNode> Children => _containers.Cast<IRealTreeNode>().Concat(_items.Cast<IRealTreeNode>()).ToList().AsReadOnly();
 
-    public override IRealTree Tree => (Parent as RealTreeContainer)?.Tree ?? (this as IRealTree) ?? throw new InvalidOperationException("Container is not attached to a tree");
+    public override IRealTree Tree => Parent?.Tree ?? (this as IRealTree) ?? throw new InvalidOperationException("Container is not attached to a tree");
 
     public RealTreeContainer(Guid? id = null, string? name = null) : base(id, name) { }
 

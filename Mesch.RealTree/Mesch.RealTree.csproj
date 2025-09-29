@@ -1,13 +1,70 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
-  </ItemGroup>
+	<PropertyGroup>
+		<!-- Package Information -->
+		<PackageId>Mesch.RealTree</PackageId>
+		<RootNamespace>Mesch.RealTree</RootNamespace>
+		<Version>0.0.1</Version>
+		<Authors>Mesch Systems</Authors>
+		<Company>Mesch Systems</Company>
+		<Summary>A tree hierarchy management abstraction with plugin architecture and eventing.</Summary>
+		<Product>RealTree</Product>
+		<Description>A flexible tree hierarchy library with middleware-style action pipelines and event notifications. Register actions at any level to intercept operations (add, remove, update, move) before they execute, enabling validation, transformation, or synchronization with external systems. Events fire after operations complete for logging, notifications, or cascading updates.</Description>
+		<PackageProjectUrl>https://github.com/meschsystems/Mesch.RealTree</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/meschsystems/Mesch.RealTree</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<Copyright>Copyright © 2025 Mesch Systems.</Copyright>
+		<PackageTags>tree;hierarchy;middleware;events;actions;pipeline;plugin;extensibility;data-structure;async;validation;interception</PackageTags>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- Documentation Generation -->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+		<NoWarn>$(NoWarn);1591</NoWarn>
+		<!-- Suppress missing XML comment warnings -->
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- Assembly Information -->
+		<AssemblyTitle>RealTree</AssemblyTitle>
+		<AssemblyDescription>A tree hierarchy management abstraction with plugin architecture and eventing.</AssemblyDescription>
+		<AssemblyConfiguration>$(Configuration)</AssemblyConfiguration>
+		<AssemblyCompany>Mesch Systems</AssemblyCompany>
+		<AssemblyProduct>RealTree</AssemblyProduct>
+		<AssemblyCopyright>Copyright © 2025 Mesch Systems.</AssemblyCopyright>
+		<AssemblyVersion>0.0.1.0</AssemblyVersion>
+		<FileVersion>0.0.1.0</FileVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- Source Link for debugging -->
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\README.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
+	</ItemGroup>
 
 </Project>
