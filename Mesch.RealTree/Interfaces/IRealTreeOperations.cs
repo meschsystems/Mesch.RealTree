@@ -167,4 +167,19 @@ public interface IRealTreeOperations
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     /// <returns>The newly created copy of the item.</returns>
     Task<IRealTreeItem> CopyItemAsync(IRealTreeItem source, IRealTreeContainer destination, Guid? newId = null, string? newName = null, CancellationToken cancellationToken = default);
+
+    // Query operations
+
+    /// <summary>
+    /// Lists the contents of a container with optional filtering and middleware support.
+    /// </summary>
+    /// <param name="container">The container whose contents should be listed.</param>
+    /// <param name="includeContainers">Whether to include child containers in the results.</param>
+    /// <param name="includeItems">Whether to include child items in the results.</param>
+    /// <param name="recursive">Whether to recursively list all descendants.</param>
+    /// <param name="triggerActions">Whether to execute registered middleware actions.</param>
+    /// <param name="triggerEvents">Whether to fire registered event handlers.</param>
+    /// <param name="cancellationToken">Cancellation token for the operation.</param>
+    /// <returns>A list of nodes matching the specified criteria.</returns>
+    Task<IReadOnlyList<IRealTreeNode>> ListContainerAsync(IRealTreeContainer container, bool includeContainers = true, bool includeItems = true, bool recursive = false, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default);
 }

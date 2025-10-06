@@ -100,6 +100,9 @@ Middleware actions form a pipeline that executes before operations. Each action 
 |--------|--------------|-----------|
 | `RegisterListContainerAction` | `ListContainerDelegate` | `Task (ListContainerContext context, Func<Task> next)` |
 
+**Context Properties:**
+- `ListContainerContext`: `.Container`, `.IncludeContainers`, `.IncludeItems`, `.Recursive`, `.ListingMetadata`, `.Tree`, `.CancellationToken`
+
 **Important Notes:**
 - Actions can run **before** or **after** the operation by placing code before/after the `await next()` call
 - Throwing an exception **cancels** the operation and propagates to the caller
@@ -167,7 +170,7 @@ All events are fire-and-forget notifications that execute after operations compl
 | `RegisterContainerListedEvent` | `ContainerListedEventDelegate` | `Task (ListContainerContext context, IReadOnlyList<IRealTreeNode> result, CancellationToken cancellationToken)` |
 
 **Context Properties:**
-- `ListContainerContext`: `.Container`, `.Tree`, `.CancellationToken`
+- `ListContainerContext`: `.Container`, `.IncludeContainers`, `.IncludeItems`, `.Recursive`, `.ListingMetadata`, `.Tree`, `.CancellationToken`
 
 **Note:** Events can be registered at multiple levels:
 - On specific nodes (container/item) - fires for operations on that subtree
@@ -197,6 +200,35 @@ var containers = new List<IRealTreeContainer>
 };
 
 await operations.BulkAddContainersAsync(tree, containers);
+```
+
+## Query Operations
+
+### List Container Contents
+
+```csharp
+// List all direct children
+var children = await operations.ListContainerAsync(container);
+
+// List only containers
+var containers = await operations.ListContainerAsync(container, includeContainers: true, includeItems: false);
+
+// List recursively (all descendants)
+var allDescendants = await operations.ListContainerAsync(container, recursive: true);
+
+// Middleware can filter or modify results
+container.RegisterListContainerAction(async (ctx, next) =>
+{
+    // Only show items with specific metadata
+    ctx.ListingMetadata["filterBy"] = "status";
+    await next();
+});
+
+// Event notification after listing
+container.RegisterContainerListedEvent(async (ctx, result, ct) =>
+{
+    Console.WriteLine($"Listed {result.Count} items from {ctx.Container.Name}");
+});
 ```
 
 ## Common Patterns

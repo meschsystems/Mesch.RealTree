@@ -720,4 +720,176 @@ public class RealTreeOperations : IRealTreeOperations
             }
         }
     }
+
+    // Query operations implementation
+    public async Task<IReadOnlyList<IRealTreeNode>> ListContainerAsync(
+        IRealTreeContainer container,
+        bool includeContainers = true,
+        bool includeItems = true,
+        bool recursive = false,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+    {
+        var context = new ListContainerContext(container, includeContainers, includeItems, recursive, container.Tree, cancellationToken);
+        IReadOnlyList<IRealTreeNode> result;
+
+        if (triggerActions)
+        {
+            result = await ExecuteListActionPipeline(context, container, node => GetListContainerActions(node), () => Task.FromResult(PerformListContainer(context)));
+        }
+        else
+        {
+            result = PerformListContainer(context);
+        }
+
+        if (triggerEvents)
+        {
+            await ExecuteListEvents(context, result, container, node => GetContainerListedEvents(node));
+        }
+
+        return result;
+    }
+
+    // Helper method for list action pipeline execution
+    private async Task<IReadOnlyList<IRealTreeNode>> ExecuteListActionPipeline<TDelegate>(
+        ListContainerContext context,
+        IRealTreeNode startNode,
+        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates,
+        Func<Task<IReadOnlyList<IRealTreeNode>>> coreOperation)
+        where TDelegate : Delegate
+    {
+        var actions = CollectFromHierarchy(startNode, getDelegates);
+
+        if (actions.Count == 0)
+        {
+            return await coreOperation();
+        }
+
+        // Build middleware pipeline with result capture
+        IReadOnlyList<IRealTreeNode>? result = null;
+        var pipeline = actions.Aggregate(
+            async () => { result = await coreOperation(); },
+            (next, action) =>
+            {
+                return () => (Task)action.DynamicInvoke(context, next)!;
+            });
+
+        await pipeline();
+        return result ?? new List<IRealTreeNode>().AsReadOnly();
+    }
+
+    // Helper method for list event execution
+    private async Task ExecuteListEvents<TDelegate>(
+        ListContainerContext context,
+        IReadOnlyList<IRealTreeNode> result,
+        IRealTreeNode startNode,
+        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates)
+        where TDelegate : Delegate
+    {
+        var events = CollectFromHierarchy(startNode, getDelegates);
+
+        if (events.Count == 0)
+        {
+            return;
+        }
+
+        // Execute all events in parallel (fire-and-forget with error logging)
+        var tasks = events.Select(async eventDelegate =>
+        {
+            try
+            {
+                await (Task)eventDelegate.DynamicInvoke(context, result, context.CancellationToken)!;
+            }
+            catch (Exception ex)
+            {
+                // Log event execution errors but don't propagate them
+                _logger?.LogError(ex, "Event handler failed during {OperationType} operation", context.GetType().Name);
+            }
+        });
+
+        try
+        {
+            await Task.WhenAll(tasks);
+        }
+        catch
+        {
+            // Events are fire-and-forget, exceptions are already logged above
+        }
+    }
+
+    // Action delegate getter for list container
+    private IEnumerable<ListContainerDelegate> GetListContainerActions(IRealTreeNode node)
+    {
+        return node switch
+        {
+            RealTreeContainer container => container.ListContainerActions,
+            RealTreeItem item => item.ListContainerActions,
+            _ => Enumerable.Empty<ListContainerDelegate>()
+        };
+    }
+
+    // Event delegate getter for container listed
+    private IEnumerable<ContainerListedEventDelegate> GetContainerListedEvents(IRealTreeNode node)
+    {
+        return node switch
+        {
+            RealTreeContainer container => container.ContainerListedEvents,
+            RealTreeItem item => item.ContainerListedEvents,
+            _ => Enumerable.Empty<ContainerListedEventDelegate>()
+        };
+    }
+
+    // Core list operation implementation
+    private IReadOnlyList<IRealTreeNode> PerformListContainer(ListContainerContext context)
+    {
+        var results = new List<IRealTreeNode>();
+
+        if (context.Recursive)
+        {
+            // Recursive listing
+            CollectNodesRecursive(context.Container, results, context.IncludeContainers, context.IncludeItems);
+        }
+        else
+        {
+            // Direct children only
+            if (context.IncludeContainers)
+            {
+                results.AddRange(context.Container.Containers);
+            }
+            if (context.IncludeItems)
+            {
+                results.AddRange(context.Container.Items);
+            }
+        }
+
+        return results.AsReadOnly();
+    }
+
+    // Helper for recursive collection
+    private void CollectNodesRecursive(IRealTreeContainer container, List<IRealTreeNode> results, bool includeContainers, bool includeItems)
+    {
+        if (includeContainers)
+        {
+            foreach (var childContainer in container.Containers)
+            {
+                results.Add(childContainer);
+                CollectNodesRecursive(childContainer, results, includeContainers, includeItems);
+            }
+        }
+
+        if (includeItems)
+        {
+            foreach (var item in container.Items)
+            {
+                results.Add(item);
+                // Items can have containers too, so recurse
+                foreach (var childContainer in item.Containers)
+                {
+                    results.Add(childContainer);
+                    CollectNodesRecursive(childContainer, results, includeContainers, includeItems);
+                }
+            }
+        }
+    }
 }
