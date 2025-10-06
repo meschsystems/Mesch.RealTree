@@ -69,6 +69,43 @@ container.RegisterAddContainerAction(async (context, next) =>
 });
 ```
 
+### Available Middleware Actions Reference
+
+Middleware actions form a pipeline that executes before operations. Each action must call `await next()` to continue the pipeline, or throw an exception to cancel the operation.
+
+#### Modification Actions
+
+| Action | Delegate Type | Signature |
+|--------|--------------|-----------|
+| `RegisterAddContainerAction` | `AddContainerDelegate` | `Task (AddContainerContext context, Func<Task> next)` |
+| `RegisterAddItemAction` | `AddItemDelegate` | `Task (AddItemContext context, Func<Task> next)` |
+| `RegisterRemoveContainerAction` | `RemoveContainerDelegate` | `Task (RemoveContainerContext context, Func<Task> next)` |
+| `RegisterRemoveItemAction` | `RemoveItemDelegate` | `Task (RemoveItemContext context, Func<Task> next)` |
+| `RegisterUpdateAction` | `UpdateNodeDelegate` | `Task (UpdateContext context, Func<Task> next)` |
+| `RegisterMoveAction` | `MoveNodeDelegate` | `Task (MoveContext context, Func<Task> next)` |
+
+**Context Properties:** Same as event contexts (see Event Handling section below)
+
+#### Bulk Operation Actions
+
+| Action | Delegate Type | Signature |
+|--------|--------------|-----------|
+| `RegisterBulkAddContainerAction` | `BulkAddContainerDelegate` | `Task (BulkAddContainerContext context, Func<Task> next)` |
+| `RegisterBulkAddItemAction` | `BulkAddItemDelegate` | `Task (BulkAddItemContext context, Func<Task> next)` |
+| `RegisterBulkRemoveAction` | `BulkRemoveContainerDelegate` | `Task (BulkRemoveContext context, Func<Task> next)` |
+
+#### Query Actions
+
+| Action | Delegate Type | Signature |
+|--------|--------------|-----------|
+| `RegisterListContainerAction` | `ListContainerDelegate` | `Task (ListContainerContext context, Func<Task> next)` |
+
+**Important Notes:**
+- Actions can run **before** or **after** the operation by placing code before/after the `await next()` call
+- Throwing an exception **cancels** the operation and propagates to the caller
+- Actions execute in order from the node up through its parent hierarchy
+- Forgetting to call `await next()` will **prevent** the operation from completing
+
 ## Event Handling
 
 Events fire after operations complete and run in parallel:
@@ -93,28 +130,44 @@ All events are fire-and-forget notifications that execute after operations compl
 
 #### Modification Events
 
-| Event | Context Type | Properties | Description |
-|-------|-------------|------------|-------------|
-| `RegisterContainerAddedEvent` | `AddContainerContext` | `.Container`, `.Parent` | Fires after a container is added |
-| `RegisterItemAddedEvent` | `AddItemContext` | `.Item`, `.Parent` | Fires after an item is added |
-| `RegisterContainerRemovedEvent` | `RemoveContainerContext` | `.Container`, `.Parent` | Fires after a container is removed |
-| `RegisterItemRemovedEvent` | `RemoveItemContext` | `.Item`, `.Parent` | Fires after an item is removed |
-| `RegisterNodeUpdatedEvent` | `UpdateContext` | `.Node`, `.OldName`, `.NewName`, `.OldMetadata`, `.NewMetadata` | Fires after a node is updated |
-| `RegisterNodeMovedEvent` | `MoveContext` | `.Node`, `.OldParent`, `.NewParent` | Fires after a node is moved |
+| Event | Delegate Type | Signature |
+|-------|--------------|-----------|
+| `RegisterContainerAddedEvent` | `ContainerAddedEventDelegate` | `Task (AddContainerContext context)` |
+| `RegisterItemAddedEvent` | `ItemAddedEventDelegate` | `Task (AddItemContext context)` |
+| `RegisterContainerRemovedEvent` | `ContainerRemovedEventDelegate` | `Task (RemoveContainerContext context)` |
+| `RegisterItemRemovedEvent` | `ItemRemovedEventDelegate` | `Task (RemoveItemContext context)` |
+| `RegisterNodeUpdatedEvent` | `NodeUpdatedEventDelegate` | `Task (UpdateContext context)` |
+| `RegisterNodeMovedEvent` | `NodeMovedEventDelegate` | `Task (MoveContext context)` |
+
+**Context Properties:**
+- `AddContainerContext`: `.Container` (IRealTreeContainer), `.Parent` (IRealTreeNode), `.Tree`, `.CancellationToken`
+- `AddItemContext`: `.Item` (IRealTreeItem), `.Parent` (IRealTreeContainer), `.Tree`, `.CancellationToken`
+- `RemoveContainerContext`: `.Container` (IRealTreeContainer), `.Parent` (IRealTreeContainer), `.Tree`, `.CancellationToken`
+- `RemoveItemContext`: `.Item` (IRealTreeItem), `.Parent` (IRealTreeContainer), `.Tree`, `.CancellationToken`
+- `UpdateContext`: `.Node`, `.OldName`, `.NewName`, `.OldMetadata`, `.NewMetadata`, `.Tree`, `.CancellationToken`
+- `MoveContext`: `.Node`, `.OldParent`, `.NewParent`, `.Tree`, `.CancellationToken`
 
 #### Bulk Operation Events
 
-| Event | Context Type | Properties | Description |
-|-------|-------------|------------|-------------|
-| `RegisterBulkContainersAddedEvent` | `BulkAddContainerContext` | `.Containers`, `.Parent` | Fires after multiple containers are added |
-| `RegisterBulkItemsAddedEvent` | `BulkAddItemContext` | `.Items`, `.Parent` | Fires after multiple items are added |
-| `RegisterBulkNodesRemovedEvent` | `BulkRemoveContext` | `.Nodes`, `.Parent` | Fires after multiple nodes are removed |
+| Event | Delegate Type | Signature |
+|-------|--------------|-----------|
+| `RegisterBulkContainersAddedEvent` | `BulkContainersAddedEventDelegate` | `Task (BulkAddContainerContext context)` |
+| `RegisterBulkItemsAddedEvent` | `BulkItemsAddedEventDelegate` | `Task (BulkAddItemContext context)` |
+| `RegisterBulkNodesRemovedEvent` | `BulkNodesRemovedEventDelegate` | `Task (BulkRemoveContext context)` |
+
+**Context Properties:**
+- `BulkAddContainerContext`: `.Containers` (IReadOnlyList), `.Parent` (IRealTreeNode), `.Tree`, `.CancellationToken`
+- `BulkAddItemContext`: `.Items` (IReadOnlyList), `.Parent` (IRealTreeContainer), `.Tree`, `.CancellationToken`
+- `BulkRemoveContext`: `.Nodes` (IReadOnlyList), `.Parent` (IRealTreeNode), `.Tree`, `.CancellationToken`
 
 #### Query Events
 
-| Event | Context Type | Properties | Description |
-|-------|-------------|------------|-------------|
-| `RegisterContainerListedEvent` | `ListContainerContext` | `.Container`, result list | Fires after container contents are listed |
+| Event | Delegate Type | Signature |
+|-------|--------------|-----------|
+| `RegisterContainerListedEvent` | `ContainerListedEventDelegate` | `Task (ListContainerContext context, IReadOnlyList<IRealTreeNode> result, CancellationToken cancellationToken)` |
+
+**Context Properties:**
+- `ListContainerContext`: `.Container`, `.Tree`, `.CancellationToken`
 
 **Note:** Events can be registered at multiple levels:
 - On specific nodes (container/item) - fires for operations on that subtree
