@@ -17,7 +17,7 @@ RealTree provides a flexible tree implementation where:
 IRealTreeNode       // Base interface for all nodes
 ├── IRealTreeContainer  // Can contain containers and items
 ├── IRealTreeItem      // Can contain containers only
-└── IRealTree          // Root node (extends container)
+└── IRealTree          // Root node with global operations (extends IRealTreeNode)
 ```
 
 ### Operations Service
@@ -53,15 +53,17 @@ Actions execute before the operation and can intercept, modify, or cancel it:
 container.RegisterAddContainerAction(async (context, next) =>
 {
     // Pre-operation logic
-    Console.WriteLine($"Adding {context.Container.Name} to {context.Parent.Name}");
-    
+    // Parent is IRealTreeNode, use ParentAsContainer helper for container-specific access
+    var parentName = context.ParentAsContainer?.Name ?? context.Parent.Name;
+    Console.WriteLine($"Adding {context.Container.Name} to {parentName}");
+
     // Validate
     if (context.Container.Name.StartsWith("temp"))
         throw new InvalidOperationException("Temp folders not allowed");
-    
+
     // Continue pipeline
     await next();
-    
+
     // Post-operation logic
     Console.WriteLine("Container added successfully");
 });
@@ -121,6 +123,7 @@ tree.RegisterAddContainerAction(async (context, next) =>
 ### Audit Logging
 
 ```csharp
+// Update events
 tree.RegisterNodeUpdatedEvent(async context =>
 {
     await auditLogger.LogAsync(new AuditEntry
@@ -130,7 +133,34 @@ tree.RegisterNodeUpdatedEvent(async context =>
         NodeId = context.Node.Id,
         OldName = context.OldName,
         NewName = context.NewName,
-        Timestamp = context.OperationTime
+        Timestamp = DateTime.UtcNow
+    });
+});
+
+// Removal events - strongly typed contexts
+tree.RegisterContainerRemovedEvent(async context =>
+{
+    await auditLogger.LogAsync(new AuditEntry
+    {
+        UserId = GetCurrentUser().Id,
+        Action = "RemoveContainer",
+        NodeId = context.Container.Id,
+        NodeName = context.Container.Name,
+        ParentId = context.Parent.Id,
+        Timestamp = DateTime.UtcNow
+    });
+});
+
+tree.RegisterItemRemovedEvent(async context =>
+{
+    await auditLogger.LogAsync(new AuditEntry
+    {
+        UserId = GetCurrentUser().Id,
+        Action = "RemoveItem",
+        NodeId = context.Item.Id,
+        NodeName = context.Item.Name,
+        ParentId = context.Parent.Id,
+        Timestamp = DateTime.UtcNow
     });
 });
 ```
@@ -151,6 +181,59 @@ container.RegisterAddItemAction(async (context, next) =>
     if (parent.Items.Any(i => i.Name == item.Name))
         throw new DuplicateNameException(item.Name);
     
+    await next();
+});
+```
+
+## Context Types
+
+### Strongly-Typed Removal Contexts
+
+Removal operations use type-specific contexts for better type safety:
+
+```csharp
+// Container removal - access .Container and .Parent (both strongly typed)
+tree.RegisterRemoveContainerAction(async (context, next) =>
+{
+    Console.WriteLine($"Removing container: {context.Container.Name}");
+    Console.WriteLine($"From parent: {context.Parent.Name}");
+
+    // context.Container is IRealTreeContainer
+    // and context.Parent is IRealTreeContainer
+
+    await next();
+});
+
+// Item removal - access .Item and .Parent (both strongly typed)
+tree.RegisterRemoveItemAction(async (context, next) =>
+{
+    Console.WriteLine($"Removing item: {context.Item.Name}");
+    Console.WriteLine($"From parent: {context.Parent.Name}");
+
+    // context.Item is IRealTreeItem
+    // and context.Parent is IRealTreeContainer
+
+    await next();
+});
+```
+
+### AddContainerContext Helpers
+
+`AddContainerContext.Parent` is `IRealTreeNode` because both containers and items can hold containers. Use helper properties to avoid manual casting:
+
+```csharp
+container.RegisterAddContainerAction(async (context, next) =>
+{
+    // Access parent as specific type
+    if (context.ParentAsContainer != null)
+    {
+        Console.WriteLine($"Parent has {context.ParentAsContainer.Items.Count} items");
+    }
+    else if (context.ParentAsItem != null)
+    {
+        Console.WriteLine($"Parent is an item: {context.ParentAsItem.Name}");
+    }
+
     await next();
 });
 ```
@@ -197,7 +280,7 @@ AddContainerDelegate validator = async (context, next) => { /* validation */ };
 container.RegisterAddContainerAction(validator);
 
 // Remove when no longer needed
-container.UnregisterAddContainerAction(validator);
+container.DeregisterAddContainerAction(validator);
 ```
 
 ### Exception Handling

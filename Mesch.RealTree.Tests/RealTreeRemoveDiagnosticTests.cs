@@ -64,7 +64,7 @@ public class RealTreeRemoveDiagnosticTests
 
             var pipeline = delegates.Aggregate(coreOp, (next, action) =>
             {
-                return () => (Task)action.DynamicInvoke(new RemoveContext(container, tree, tree, default), next)!;
+                return () => (Task)action.DynamicInvoke(new RemoveContainerContext(container, (IRealTreeContainer)tree, tree, default), next)!;
             });
 
             _output.WriteLine("Executing pipeline...");
@@ -90,7 +90,7 @@ public class RealTreeRemoveDiagnosticTests
         tree.RegisterRemoveContainerAction(async (ctx, next) =>
         {
             actionCalled = true;
-            _output.WriteLine($"Action called for {ctx.Node.Name}");
+            _output.WriteLine($"Action called for {ctx.Container.Name}");
             _output.WriteLine($"About to call next()...");
             await next();
             coreOperationReached = true;

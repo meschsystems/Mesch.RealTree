@@ -146,7 +146,7 @@ public class RealTreeMiddlewareActionsTests
         tree.RegisterRemoveContainerAction(async (ctx, next) =>
         {
             executed = true;
-            Assert.Same(container, ctx.Node);
+            Assert.Same(container, ctx.Container);
             await next();
         });
 
@@ -166,7 +166,7 @@ public class RealTreeMiddlewareActionsTests
         container.RegisterRemoveItemAction(async (ctx, next) =>
         {
             executed = true;
-            Assert.Same(item, ctx.Node);
+            Assert.Same(item, ctx.Item);
             await next();
         });
 

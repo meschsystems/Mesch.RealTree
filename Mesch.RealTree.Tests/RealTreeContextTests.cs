@@ -60,7 +60,7 @@ public class RealTreeContextTests
     {
         var tree = _factory.CreateTree();
         var container = await _operations.AddContainerAsync(tree, null, "Test");
-        RemoveContext capturedContext = null;
+        RemoveContainerContext capturedContext = null;
 
         tree.RegisterRemoveContainerAction(async (ctx, next) =>
         {
@@ -71,7 +71,7 @@ public class RealTreeContextTests
         await _operations.RemoveAsync(container);
 
         Assert.NotNull(capturedContext);
-        Assert.Same(container, capturedContext.Node);
+        Assert.Same(container, capturedContext.Container);
         Assert.Same(tree, capturedContext.Parent);
     }
 

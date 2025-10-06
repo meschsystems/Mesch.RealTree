@@ -69,7 +69,7 @@ public class RealTreeEventsTests
         // Register on parent (tree) not on the container being removed
         tree.RegisterContainerRemovedEvent(async ctx =>
         {
-            capturedNode = ctx.Node;
+            capturedNode = ctx.Container;
             tcs.TrySetResult(true);
             await Task.CompletedTask;
         });
@@ -95,7 +95,7 @@ public class RealTreeEventsTests
         // Register on parent (container) not on the item being removed
         container.RegisterItemRemovedEvent(async ctx =>
         {
-            capturedNode = ctx.Node;
+            capturedNode = ctx.Item;
             tcs.TrySetResult(true);
             await Task.CompletedTask;
         });

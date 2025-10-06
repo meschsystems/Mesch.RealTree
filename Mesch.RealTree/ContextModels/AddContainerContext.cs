@@ -17,6 +17,16 @@ public class AddContainerContext : OperationContext
     public IRealTreeNode Parent { get; }
 
     /// <summary>
+    /// Gets the parent as a container if it implements IRealTreeContainer, otherwise null.
+    /// </summary>
+    public IRealTreeContainer? ParentAsContainer => Parent as IRealTreeContainer;
+
+    /// <summary>
+    /// Gets the parent as an item if it implements IRealTreeItem, otherwise null.
+    /// </summary>
+    public IRealTreeItem? ParentAsItem => Parent as IRealTreeItem;
+
+    /// <summary>
     /// Initializes a new instance of the AddContainerContext class.
     /// </summary>
     /// <param name="container">The container being added.</param>

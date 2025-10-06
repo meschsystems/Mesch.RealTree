@@ -32,7 +32,7 @@ public delegate Task AddItemDelegate(AddItemContext context, Func<Task> next);
 /// <param name="context">Context containing the container being removed and its parent.</param>
 /// <param name="next">The next handler in the pipeline.</param>
 /// <returns>A task representing the asynchronous operation.</returns>
-public delegate Task RemoveContainerDelegate(RemoveContext context, Func<Task> next);
+public delegate Task RemoveContainerDelegate(RemoveContainerContext context, Func<Task> next);
 
 /// <summary>
 /// Middleware delegate for item removal operations.
@@ -40,7 +40,7 @@ public delegate Task RemoveContainerDelegate(RemoveContext context, Func<Task> n
 /// <param name="context">Context containing the item being removed and its parent.</param>
 /// <param name="next">The next handler in the pipeline.</param>
 /// <returns>A task representing the asynchronous operation.</returns>
-public delegate Task RemoveItemDelegate(RemoveContext context, Func<Task> next);
+public delegate Task RemoveItemDelegate(RemoveItemContext context, Func<Task> next);
 
 /// <summary>
 /// Middleware delegate for bulk container removal operations.
@@ -112,7 +112,7 @@ public delegate Task ContainerAddedEventDelegate(AddContainerContext context);
 /// </summary>
 /// <param name="context">Context containing details about the container removal.</param>
 /// <returns>A task representing the asynchronous event handling.</returns>
-public delegate Task ContainerRemovedEventDelegate(RemoveContext context);
+public delegate Task ContainerRemovedEventDelegate(RemoveContainerContext context);
 
 /// <summary>
 /// Event delegate that executes after an item has been successfully added.
@@ -126,7 +126,7 @@ public delegate Task ItemAddedEventDelegate(AddItemContext context);
 /// </summary>
 /// <param name="context">Context containing details about the item removal.</param>
 /// <returns>A task representing the asynchronous event handling.</returns>
-public delegate Task ItemRemovedEventDelegate(RemoveContext context);
+public delegate Task ItemRemovedEventDelegate(RemoveItemContext context);
 
 /// <summary>
 /// Event delegate that executes after a node has been successfully updated.

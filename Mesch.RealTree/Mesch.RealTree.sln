@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mesch.RealTree", "Mesch.RealTree.csproj", "{12C43002-40B8-CBAB-9613-645A457E7F69}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{12C43002-40B8-CBAB-9613-645A457E7F69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12C43002-40B8-CBAB-9613-645A457E7F69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12C43002-40B8-CBAB-9613-645A457E7F69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12C43002-40B8-CBAB-9613-645A457E7F69}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9B8457D4-A232-471C-A91D-4A8041F8DE3B}
+	EndGlobalSection
+EndGlobal

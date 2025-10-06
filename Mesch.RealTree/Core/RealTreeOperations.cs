@@ -80,43 +80,59 @@ public class RealTreeOperations : IRealTreeOperations
     }
 
     public async Task RemoveAsync(
-        IRealTreeNode node, 
+        IRealTreeNode node,
         bool triggerActions = true,
-        bool triggerEvents = true, 
+        bool triggerEvents = true,
         CancellationToken cancellationToken = default)
     {
-        var context = new RemoveContext(node, node.Parent, node.Tree, cancellationToken);
-
-        if (triggerActions)
+        if (node.Parent == null)
         {
-            if (node is IRealTreeContainer)
+            throw new InvalidOperationException("Cannot remove root node");
+        }
+
+        if (node is IRealTreeContainer container)
+        {
+            var parentContainer = node.Parent as IRealTreeContainer
+                ?? throw new InvalidOperationException("Container parent must be a container");
+            var context = new RemoveContainerContext(container, parentContainer, node.Tree, cancellationToken);
+
+            if (triggerActions)
             {
                 await ExecuteActionPipeline(context, node, n => GetRemoveContainerActions(n), () => { PerformRemove(node); return Task.CompletedTask; });
             }
             else
             {
+                PerformRemove(node);
+            }
+
+            if (triggerEvents)
+            {
+                await ExecuteEvents(context, context.Parent, n => GetContainerRemovedEvents(n));
+            }
+        }
+        else if (node is IRealTreeItem item)
+        {
+            var parentContainer = node.Parent as IRealTreeContainer
+                ?? throw new InvalidOperationException("Item parent must be a container");
+            var context = new RemoveItemContext(item, parentContainer, node.Tree, cancellationToken);
+
+            if (triggerActions)
+            {
                 await ExecuteActionPipeline(context, node, n => GetRemoveItemActions(n), () => { PerformRemove(node); return Task.CompletedTask; });
+            }
+            else
+            {
+                PerformRemove(node);
+            }
+
+            if (triggerEvents)
+            {
+                await ExecuteEvents(context, context.Parent, n => GetItemRemovedEvents(n));
             }
         }
         else
         {
-            PerformRemove(node);
-        }
-
-        if (triggerEvents)
-        {
-            // Only collect events from parent if parent exists
-            if (context.Parent != null)
-            {
-                if (node is IRealTreeContainer)
-                {
-                    await ExecuteEvents(context, context.Parent, n => GetContainerRemovedEvents(n));
-                }
-                else
-                {
-                    await ExecuteEvents(context, context.Parent, n => GetItemRemovedEvents(n));
-                }
-            }
+            throw new InvalidOperationException("Node must be a container or item");
         }
     }
 
