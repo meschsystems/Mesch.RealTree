@@ -87,6 +87,50 @@ container.RegisterContainerAddedEvent(async context =>
 });
 ```
 
+### Available Events Reference
+
+All events are fire-and-forget notifications that execute after operations complete. They run in parallel and exceptions are logged but don't propagate.
+
+#### Modification Events
+
+| Event | Context Type | Properties | Description |
+|-------|-------------|------------|-------------|
+| `RegisterContainerAddedEvent` | `AddContainerContext` | `.Container`, `.Parent` | Fires after a container is added |
+| `RegisterItemAddedEvent` | `AddItemContext` | `.Item`, `.Parent` | Fires after an item is added |
+| `RegisterContainerRemovedEvent` | `RemoveContainerContext` | `.Container`, `.Parent` | Fires after a container is removed |
+| `RegisterItemRemovedEvent` | `RemoveItemContext` | `.Item`, `.Parent` | Fires after an item is removed |
+| `RegisterNodeUpdatedEvent` | `UpdateContext` | `.Node`, `.OldName`, `.NewName`, `.OldMetadata`, `.NewMetadata` | Fires after a node is updated |
+| `RegisterNodeMovedEvent` | `MoveContext` | `.Node`, `.OldParent`, `.NewParent` | Fires after a node is moved |
+
+#### Bulk Operation Events
+
+| Event | Context Type | Properties | Description |
+|-------|-------------|------------|-------------|
+| `RegisterBulkContainersAddedEvent` | `BulkAddContainerContext` | `.Containers`, `.Parent` | Fires after multiple containers are added |
+| `RegisterBulkItemsAddedEvent` | `BulkAddItemContext` | `.Items`, `.Parent` | Fires after multiple items are added |
+| `RegisterBulkNodesRemovedEvent` | `BulkRemoveContext` | `.Nodes`, `.Parent` | Fires after multiple nodes are removed |
+
+#### Query Events
+
+| Event | Context Type | Properties | Description |
+|-------|-------------|------------|-------------|
+| `RegisterContainerListedEvent` | `ListContainerContext` | `.Container`, result list | Fires after container contents are listed |
+
+**Note:** Events can be registered at multiple levels:
+- On specific nodes (container/item) - fires for operations on that subtree
+- On the tree root - fires for all operations globally
+
+**Example:**
+```csharp
+// Local event - only fires for this container's operations
+myContainer.RegisterItemAddedEvent(async ctx =>
+    await LogLocal($"Item added: {ctx.Item.Name}"));
+
+// Global event - fires for all item additions in the entire tree
+tree.RegisterItemAddedEvent(async ctx =>
+    await LogGlobal($"Item added anywhere: {ctx.Item.Name}"));
+```
+
 ## Bulk Operations
 
 Efficient operations for multiple nodes:
