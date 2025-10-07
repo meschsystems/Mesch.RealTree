@@ -45,6 +45,110 @@ var found = tree.FindByPath("/Documents/Report.pdf");
 Console.WriteLine(found?.Name); // "Report.pdf"
 ```
 
+## API Reference
+
+### IRealTreeOperations Methods
+
+All tree modifications go through `IRealTreeOperations`. Every method supports middleware actions and events.
+
+#### Add Operations
+
+| Method | Parameters | Returns | Triggers |
+|--------|-----------|---------|----------|
+| `AddContainerAsync` | `(IRealTreeNode parent, Guid? id, string name)` | `IRealTreeContainer` | `AddContainerAction`, `ContainerAddedEvent` |
+| `AddContainerAsync` | `(IRealTreeNode parent, IRealTreeContainer container)` | `IRealTreeContainer` | `AddContainerAction`, `ContainerAddedEvent` |
+| `AddItemAsync` | `(IRealTreeContainer parent, Guid? id, string name)` | `IRealTreeItem` | `AddItemAction`, `ItemAddedEvent` |
+| `AddItemAsync` | `(IRealTreeContainer parent, IRealTreeItem item)` | `IRealTreeItem` | `AddItemAction`, `ItemAddedEvent` |
+
+#### Remove Operations
+
+| Method | Parameters | Returns | Triggers |
+|--------|-----------|---------|----------|
+| `RemoveAsync` | `(IRealTreeNode node)` | `Task` | `RemoveContainerAction` or `RemoveItemAction`, corresponding events |
+| `RemoveAllContainersAsync` | `(IRealTreeNode parent)` | `Task` | `RemoveContainerAction`, `ContainerRemovedEvent` (per container) |
+| `RemoveAllItemsAsync` | `(IRealTreeContainer parent)` | `Task` | `RemoveItemAction`, `ItemRemovedEvent` (per item) |
+
+#### Update/Move Operations
+
+| Method | Parameters | Returns | Triggers |
+|--------|-----------|---------|----------|
+| `UpdateAsync` | `(IRealTreeNode node, string? newName, Dictionary<string, object>? newMetadata)` | `Task` | `UpdateAction`, `NodeUpdatedEvent` |
+| `MoveAsync` | `(IRealTreeNode node, IRealTreeNode newParent)` | `Task` | `MoveAction`, `NodeMovedEvent` |
+
+#### Bulk Operations
+
+| Method | Parameters | Returns | Triggers |
+|--------|-----------|---------|----------|
+| `BulkAddContainersAsync` | `(IRealTreeNode parent, IEnumerable<IRealTreeContainer> containers)` | `Task` | `BulkAddContainerAction`, `BulkContainersAddedEvent` |
+| `BulkAddItemsAsync` | `(IRealTreeContainer parent, IEnumerable<IRealTreeItem> items)` | `Task` | `BulkAddItemAction`, `BulkItemsAddedEvent` |
+| `BulkRemoveAsync` | `(IEnumerable<IRealTreeNode> nodes)` | `Task` | `BulkRemoveAction`, `BulkNodesRemovedEvent` |
+
+#### Copy Operations
+
+| Method | Parameters | Returns | Triggers |
+|--------|-----------|---------|----------|
+| `CopyContainerAsync` | `(IRealTreeContainer source, IRealTreeNode destination, Guid? newId, string? newName)` | `IRealTreeContainer` | None (uses Add operations internally) |
+| `CopyItemAsync` | `(IRealTreeItem source, IRealTreeContainer destination, Guid? newId, string? newName)` | `IRealTreeItem` | None (uses Add operations internally) |
+
+#### Query Operations
+
+| Method | Parameters | Returns | Triggers |
+|--------|-----------|---------|----------|
+| `ListContainerAsync` | `(IRealTreeContainer container, bool includeContainers, bool includeItems, bool recursive)` | `IReadOnlyList<IRealTreeNode>` | `ListContainerAction`, `ContainerListedEvent` |
+
+**Notes:**
+- All methods have optional `triggerActions`, `triggerEvents`, and `cancellationToken` parameters (not shown above)
+- Middleware actions execute before the operation; events execute after
+- Actions can cancel operations by throwing exceptions or not calling `next()`
+
+### Node Registration Methods
+
+Register middleware and events on nodes to intercept operations:
+
+#### On IRealTreeContainer, IRealTreeItem, and IRealTree
+
+**Actions (Middleware):**
+- `RegisterAddContainerAction(AddContainerDelegate handler)`
+- `RegisterRemoveContainerAction(RemoveContainerDelegate handler)`
+- `RegisterAddItemAction(AddItemDelegate handler)`
+- `RegisterRemoveItemAction(RemoveItemDelegate handler)`
+- `RegisterUpdateAction(UpdateNodeDelegate handler)`
+- `RegisterMoveAction(MoveNodeDelegate handler)`
+- `RegisterBulkAddContainerAction(BulkAddContainerDelegate handler)`
+- `RegisterBulkAddItemAction(BulkAddItemDelegate handler)`
+- `RegisterBulkRemoveAction(BulkRemoveContainerDelegate handler)`
+- `RegisterListContainerAction(ListContainerDelegate handler)`
+
+**Events:**
+- `RegisterContainerAddedEvent(ContainerAddedEventDelegate handler)`
+- `RegisterContainerRemovedEvent(ContainerRemovedEventDelegate handler)`
+- `RegisterItemAddedEvent(ItemAddedEventDelegate handler)`
+- `RegisterItemRemovedEvent(ItemRemovedEventDelegate handler)`
+- `RegisterNodeUpdatedEvent(NodeUpdatedEventDelegate handler)`
+- `RegisterNodeMovedEvent(NodeMovedEventDelegate handler)`
+- `RegisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler)`
+- `RegisterBulkItemsAddedEvent(BulkItemsAddedEventDelegate handler)`
+- `RegisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler)`
+- `RegisterContainerListedEvent(ContainerListedEventDelegate handler)`
+
+**Deregistration:** Replace `Register` with `Deregister` (e.g., `DeregisterAddContainerAction`)
+
+### Navigation Methods
+
+**On IRealTree:**
+- `FindByPath(string path)` - Returns node at path (e.g., "/folder/item")
+- `FindById(Guid id)` - Returns node with matching ID
+
+**On IRealTreeNode:**
+- `.Parent` - Parent node
+- `.Path` - Full path from root
+- `.Tree` - Root tree reference
+
+**On IRealTreeContainer:**
+- `.Containers` - Read-only list of child containers
+- `.Items` - Read-only list of child items
+- `.Children` - Read-only list of all children (containers + items)
+
 ## Middleware Actions
 
 Actions execute before the operation and can intercept, modify, or cancel it:

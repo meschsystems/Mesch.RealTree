@@ -15,7 +15,7 @@
 		<Company>Mesch Systems</Company>
 		<Summary>A tree hierarchy management abstraction with plugin architecture and eventing.</Summary>
 		<Product>RealTree</Product>
-		<Description>A flexible tree hierarchy library with middleware-style action pipelines and event notifications. Register actions at any level to intercept operations (add, remove, update, move) before they execute, enabling validation, transformation, or synchronization with external systems. Events fire after operations complete for logging, notifications, or cascading updates.</Description>
+		<Description>A flexible tree hierarchy library with middleware-style action pipelines and event notifications. Register actions at any level to intercept operations (add, remove, update, move) before they execute, enabling validation, transformation, or synchronization with external systems. Events fire before or after operations complete for logging, notifications, or cascading updates.</Description>
 		<PackageProjectUrl>https://github.com/meschsystems/Mesch.RealTree</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/meschsystems/Mesch.RealTree</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
