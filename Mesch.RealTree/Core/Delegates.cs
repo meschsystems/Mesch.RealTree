@@ -100,6 +100,15 @@ public delegate Task MoveNodeDelegate(MoveContext context, Func<Task> next);
 public delegate Task ListContainerDelegate(ListContainerContext context, Func<Task> next);
 
 /// <summary>
+/// Delegate for middleware actions that execute when an item is being shown/displayed.
+/// Can intercept, modify, or cancel the show operation.
+/// </summary>
+/// <param name="context">The context containing information about the show operation.</param>
+/// <param name="next">The next handler in the pipeline.</param>
+/// <returns>A task that represents the completion of the action.</returns>
+public delegate Task ShowItemDelegate(ShowItemContext context, Func<Task> next);
+
+/// <summary>
 /// Event delegate that executes after a container has been successfully added.
 /// Events are fire-and-forget and execute in parallel.
 /// </summary>
@@ -172,3 +181,12 @@ public delegate Task BulkNodesRemovedEventDelegate(BulkRemoveContext context);
 /// <param name="cancellationToken">The cancellation token for the operation.</param>
 /// <returns>A task that represents the completion of the event handler.</returns>
 public delegate Task ContainerListedEventDelegate(ListContainerContext context, IReadOnlyList<IRealTreeNode> result, CancellationToken cancellationToken);
+
+/// <summary>
+/// Delegate for event handlers that execute after an item has been shown.
+/// These are notification events that run after the show operation completes.
+/// </summary>
+/// <param name="context">The context containing information about the completed show operation.</param>
+/// <param name="cancellationToken">The cancellation token for the operation.</param>
+/// <returns>A task that represents the completion of the event handler.</returns>
+public delegate Task ItemShownEventDelegate(ShowItemContext context, CancellationToken cancellationToken);

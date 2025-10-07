@@ -182,4 +182,14 @@ public interface IRealTreeOperations
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     /// <returns>A list of nodes matching the specified criteria.</returns>
     Task<IReadOnlyList<IRealTreeNode>> ListContainerAsync(IRealTreeContainer container, bool includeContainers = true, bool includeItems = true, bool recursive = false, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Shows/displays an item with middleware support for custom rendering or validation.
+    /// </summary>
+    /// <param name="item">The item to show.</param>
+    /// <param name="triggerActions">Whether to execute registered middleware actions.</param>
+    /// <param name="triggerEvents">Whether to fire registered event handlers.</param>
+    /// <param name="cancellationToken">Cancellation token for the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task ShowItemAsync(IRealTreeItem item, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default);
 }

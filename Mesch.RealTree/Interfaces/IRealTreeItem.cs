@@ -67,6 +67,12 @@ public interface IRealTreeItem : IRealTreeNode
     /// <param name="handler">The action handler to register.</param>
     void RegisterListContainerAction(ListContainerDelegate handler);
 
+    /// <summary>
+    /// Registers a middleware action that executes when this item is being shown/displayed.
+    /// </summary>
+    /// <param name="handler">The action handler to register.</param>
+    void RegisterShowItemAction(ShowItemDelegate handler);
+
     #endregion
 
     #region Action deregistration methods
@@ -120,6 +126,13 @@ public interface IRealTreeItem : IRealTreeNode
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
     bool DeregisterListContainerAction(ListContainerDelegate handler);
 
+    /// <summary>
+    /// Deregisters a previously registered show item action.
+    /// </summary>
+    /// <param name="handler">The action handler to deregister.</param>
+    /// <returns>True if the handler was found and removed; otherwise, false.</returns>
+    bool DeregisterShowItemAction(ShowItemDelegate handler);
+
     #endregion
 
     #region Event registration methods (notifications)
@@ -165,6 +178,12 @@ public interface IRealTreeItem : IRealTreeNode
     /// </summary>
     /// <param name="handler">The event handler to register.</param>
     void RegisterContainerListedEvent(ContainerListedEventDelegate handler);
+
+    /// <summary>
+    /// Registers an event handler that executes after this item has been shown/displayed.
+    /// </summary>
+    /// <param name="handler">The event handler to register.</param>
+    void RegisterItemShownEvent(ItemShownEventDelegate handler);
 
     #endregion
 
@@ -218,6 +237,13 @@ public interface IRealTreeItem : IRealTreeNode
     /// <param name="handler">The event handler to deregister.</param>
     /// <returns>True if the handler was found and removed; otherwise, false.</returns>
     bool DeregisterContainerListedEvent(ContainerListedEventDelegate handler);
+
+    /// <summary>
+    /// Deregisters a previously registered item shown event handler.
+    /// </summary>
+    /// <param name="handler">The event handler to deregister.</param>
+    /// <returns>True if the handler was found and removed; otherwise, false.</returns>
+    bool DeregisterItemShownEvent(ItemShownEventDelegate handler);
 
     #endregion
 }

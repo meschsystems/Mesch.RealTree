@@ -892,4 +892,74 @@ public class RealTreeOperations : IRealTreeOperations
             }
         }
     }
+
+    // Show item operation implementation
+    public async Task ShowItemAsync(
+        IRealTreeItem item,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+    {
+        var context = new ShowItemContext(item, item.Tree, cancellationToken);
+
+        if (triggerActions)
+        {
+            await ExecuteActionPipeline(context, item, node => GetShowItemActions(node), () => Task.CompletedTask);
+        }
+
+        if (triggerEvents)
+        {
+            await ExecuteShowItemEvents(context, item, node => GetItemShownEvents(node));
+        }
+    }
+
+    // Helper method for show item event execution
+    private async Task ExecuteShowItemEvents<TDelegate>(
+        ShowItemContext context,
+        IRealTreeNode startNode,
+        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates)
+        where TDelegate : Delegate
+    {
+        var events = CollectFromHierarchy(startNode, getDelegates);
+
+        if (events.Count == 0)
+        {
+            return;
+        }
+
+        // Execute all events in parallel (fire-and-forget with error logging)
+        var tasks = events.Select(async eventDelegate =>
+        {
+            try
+            {
+                await (Task)eventDelegate.DynamicInvoke(context, context.CancellationToken)!;
+            }
+            catch (Exception ex)
+            {
+                // Log event execution errors but don't propagate them
+                _logger?.LogError(ex, "Event handler failed during {OperationType} operation", context.GetType().Name);
+            }
+        });
+
+        try
+        {
+            await Task.WhenAll(tasks);
+        }
+        catch
+        {
+            // Events are fire-and-forget, exceptions are already logged above
+        }
+    }
+
+    // Action delegate getter for show item
+    private IEnumerable<ShowItemDelegate> GetShowItemActions(IRealTreeNode node)
+    {
+        return node is RealTreeItem item ? item.ShowItemActions : Enumerable.Empty<ShowItemDelegate>();
+    }
+
+    // Event delegate getter for item shown
+    private IEnumerable<ItemShownEventDelegate> GetItemShownEvents(IRealTreeNode node)
+    {
+        return node is RealTreeItem item ? item.ItemShownEvents : Enumerable.Empty<ItemShownEventDelegate>();
+    }
 }

@@ -16,6 +16,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     private readonly List<BulkAddContainerDelegate> _bulkAddContainerActions = new List<BulkAddContainerDelegate>();
     private readonly List<BulkRemoveContainerDelegate> _bulkRemoveActions = new List<BulkRemoveContainerDelegate>();
     private readonly List<ListContainerDelegate> _listContainerActions = new List<ListContainerDelegate>();
+    private readonly List<ShowItemDelegate> _showItemActions = new List<ShowItemDelegate>();
 
     #endregion
 
@@ -28,6 +29,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     private readonly List<BulkContainersAddedEventDelegate> _bulkContainersAddedEvents = new List<BulkContainersAddedEventDelegate>();
     private readonly List<BulkNodesRemovedEventDelegate> _bulkNodesRemovedEvents = new List<BulkNodesRemovedEventDelegate>();
     private readonly List<ContainerListedEventDelegate> _containerListedEvents = new List<ContainerListedEventDelegate>();
+    private readonly List<ItemShownEventDelegate> _itemShownEvents = new List<ItemShownEventDelegate>();
 
     #endregion
 
@@ -45,6 +47,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     public void RegisterBulkAddContainerAction(BulkAddContainerDelegate handler) => _bulkAddContainerActions.Add(handler);
     public void RegisterBulkRemoveAction(BulkRemoveContainerDelegate handler) => _bulkRemoveActions.Add(handler);
     public void RegisterListContainerAction(ListContainerDelegate handler) => _listContainerActions.Add(handler);
+    public void RegisterShowItemAction(ShowItemDelegate handler) => _showItemActions.Add(handler);
 
     #endregion
 
@@ -56,6 +59,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     public bool DeregisterBulkAddContainerAction(BulkAddContainerDelegate handler) => _bulkAddContainerActions.Remove(handler);
     public bool DeregisterBulkRemoveAction(BulkRemoveContainerDelegate handler) => _bulkRemoveActions.Remove(handler);
     public bool DeregisterListContainerAction(ListContainerDelegate handler) => _listContainerActions.Remove(handler);
+    public bool DeregisterShowItemAction(ShowItemDelegate handler) => _showItemActions.Remove(handler);
     #endregion
 
     #region Event registration methods (notifications)
@@ -66,6 +70,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     public void RegisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler) => _bulkContainersAddedEvents.Add(handler);
     public void RegisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler) => _bulkNodesRemovedEvents.Add(handler);
     public void RegisterContainerListedEvent(ContainerListedEventDelegate handler) => _containerListedEvents.Add(handler);
+    public void RegisterItemShownEvent(ItemShownEventDelegate handler) => _itemShownEvents.Add(handler);
 
     #endregion
 
@@ -77,6 +82,7 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     public bool DeregisterBulkContainersAddedEvent(BulkContainersAddedEventDelegate handler) => _bulkContainersAddedEvents.Remove(handler);
     public bool DeregisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler) => _bulkNodesRemovedEvents.Remove(handler);
     public bool DeregisterContainerListedEvent(ContainerListedEventDelegate handler) => _containerListedEvents.Remove(handler);
+    public bool DeregisterItemShownEvent(ItemShownEventDelegate handler) => _itemShownEvents.Remove(handler);
 
     #endregion
 
@@ -117,6 +123,11 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     /// </summary>
     public IReadOnlyList<ListContainerDelegate> ListContainerActions => _listContainerActions.AsReadOnly();
 
+    /// <summary>
+    /// Gets the collection of registered show item action handlers for internal operations service access.
+    /// </summary>
+    public IReadOnlyList<ShowItemDelegate> ShowItemActions => _showItemActions.AsReadOnly();
+
     #endregion
 
     #region Event collections for operations service access
@@ -155,6 +166,11 @@ public class RealTreeItem : RealTreeNodeBase, IRealTreeItem
     /// Gets the collection of registered container listed event handlers for internal operations service access.
     /// </summary>
     public IReadOnlyList<ContainerListedEventDelegate> ContainerListedEvents => _containerListedEvents.AsReadOnly();
+
+    /// <summary>
+    /// Gets the collection of registered item shown event handlers for internal operations service access.
+    /// </summary>
+    public IReadOnlyList<ItemShownEventDelegate> ItemShownEvents => _itemShownEvents.AsReadOnly();
 
     public void AddContainer(IRealTreeContainer container)
     {

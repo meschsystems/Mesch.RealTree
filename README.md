@@ -95,6 +95,7 @@ All tree modifications go through `IRealTreeOperations`. Every method supports m
 | Method | Parameters | Returns | Triggers |
 |--------|-----------|---------|----------|
 | `ListContainerAsync` | `(IRealTreeContainer container, bool includeContainers, bool includeItems, bool recursive)` | `IReadOnlyList<IRealTreeNode>` | `ListContainerAction`, `ContainerListedEvent` |
+| `ShowItemAsync` | `(IRealTreeItem item)` | `Task` | `ShowItemAction`, `ItemShownEvent` |
 
 **Notes:**
 - All methods have optional `triggerActions`, `triggerEvents`, and `cancellationToken` parameters (not shown above)
@@ -131,7 +132,15 @@ Register middleware and events on nodes to intercept operations:
 - `RegisterBulkNodesRemovedEvent(BulkNodesRemovedEventDelegate handler)`
 - `RegisterContainerListedEvent(ContainerListedEventDelegate handler)`
 
-**Deregistration:** Replace `Register` with `Deregister` (e.g., `DeregisterAddContainerAction`)
+#### On IRealTreeItem only
+
+**Actions (Middleware):**
+- `RegisterShowItemAction(ShowItemDelegate handler)`
+
+**Events:**
+- `RegisterItemShownEvent(ItemShownEventDelegate handler)`
+
+**Deregistration:** Replace `Register` with `Deregister` (e.g., `DeregisterAddContainerAction`, `DeregisterShowItemAction`)
 
 ### Navigation Methods
 
@@ -203,9 +212,11 @@ Middleware actions form a pipeline that executes before operations. Each action 
 | Action | Delegate Type | Signature |
 |--------|--------------|-----------|
 | `RegisterListContainerAction` | `ListContainerDelegate` | `Task (ListContainerContext context, Func<Task> next)` |
+| `RegisterShowItemAction` | `ShowItemDelegate` | `Task (ShowItemContext context, Func<Task> next)` |
 
 **Context Properties:**
 - `ListContainerContext`: `.Container`, `.IncludeContainers`, `.IncludeItems`, `.Recursive`, `.ListingMetadata`, `.Tree`, `.CancellationToken`
+- `ShowItemContext`: `.Item`, `.ShowMetadata`, `.Tree`, `.CancellationToken`
 
 **Important Notes:**
 - Actions can run **before** or **after** the operation by placing code before/after the `await next()` call
@@ -272,9 +283,11 @@ All events are fire-and-forget notifications that execute after operations compl
 | Event | Delegate Type | Signature |
 |-------|--------------|-----------|
 | `RegisterContainerListedEvent` | `ContainerListedEventDelegate` | `Task (ListContainerContext context, IReadOnlyList<IRealTreeNode> result, CancellationToken cancellationToken)` |
+| `RegisterItemShownEvent` | `ItemShownEventDelegate` | `Task (ShowItemContext context, CancellationToken cancellationToken)` |
 
 **Context Properties:**
 - `ListContainerContext`: `.Container`, `.IncludeContainers`, `.IncludeItems`, `.Recursive`, `.ListingMetadata`, `.Tree`, `.CancellationToken`
+- `ShowItemContext`: `.Item`, `.ShowMetadata`, `.Tree`, `.CancellationToken`
 
 **Note:** Events can be registered at multiple levels:
 - On specific nodes (container/item) - fires for operations on that subtree
@@ -332,6 +345,52 @@ container.RegisterListContainerAction(async (ctx, next) =>
 container.RegisterContainerListedEvent(async (ctx, result, ct) =>
 {
     Console.WriteLine($"Listed {result.Count} items from {ctx.Container.Name}");
+});
+```
+
+### Show Item
+
+```csharp
+// Show/display an item - triggers middleware for custom rendering
+await operations.ShowItemAsync(item);
+
+// Register middleware to control how items are displayed
+item.RegisterShowItemAction(async (ctx, next) =>
+{
+    // Validate access or prepare data
+    if (!HasPermission(currentUser, ctx.Item))
+        throw new UnauthorizedAccessException();
+
+    // Add rendering metadata
+    ctx.ShowMetadata["format"] = "detailed";
+    ctx.ShowMetadata["includeHistory"] = true;
+
+    await next();
+});
+
+// Another middleware that uses the metadata to render
+item.RegisterShowItemAction(async (ctx, next) =>
+{
+    var format = ctx.ShowMetadata.GetValueOrDefault("format", "summary");
+
+    if (format == "detailed")
+    {
+        Console.WriteLine($"Item: {ctx.Item.Name}");
+        Console.WriteLine($"Path: {ctx.Item.Path}");
+        Console.WriteLine($"ID: {ctx.Item.Id}");
+    }
+    else
+    {
+        Console.WriteLine(ctx.Item.Name);
+    }
+
+    await next();
+});
+
+// Event notification after item is shown
+item.RegisterItemShownEvent(async (ctx, ct) =>
+{
+    await LogItemAccess(ctx.Item.Id, currentUser.Id);
 });
 ```
 
