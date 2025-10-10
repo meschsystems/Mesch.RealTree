@@ -1,4 +1,4 @@
-﻿using Xunit.Abstractions;
+using Xunit.Abstractions;
 
 namespace Mesch.RealTree.Tests;
 
@@ -89,14 +89,13 @@ public class RealTreeIntegrationTests
     }
 
     [Fact]
-    public async Task MultipleOperationsWithActionsAndEvents_WorkTogether()
+    public async Task ActionsWithValidation_WorkCorrectly()
     {
         var tree = _factory.CreateTree();
-        var auditLog = new List<string>();
         var validationLog = new List<string>();
 
-        // Global validation
-        tree.RegisterAddContainerAction(async (ctx, next) =>
+        // Global validation using type-based registration
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             if (ctx.Container.Name.Contains("invalid"))
             {
@@ -104,13 +103,6 @@ public class RealTreeIntegrationTests
             }
             validationLog.Add($"Validated: {ctx.Container.Name}");
             await next();
-        });
-
-        // Global audit
-        tree.RegisterContainerAddedEvent(async ctx =>
-        {
-            auditLog.Add($"Added: {ctx.Container.Name}");
-            await Task.CompletedTask;
         });
 
         // Add valid containers
@@ -121,10 +113,7 @@ public class RealTreeIntegrationTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await _operations.AddContainerAsync(tree, null, "invalid_name"));
 
-        await Task.Delay(100); // Wait for events
-
         Assert.Equal(2, validationLog.Count);
-        Assert.Equal(2, auditLog.Count);
         Assert.Equal(2, tree.Containers.Count);
     }
 
@@ -167,19 +156,19 @@ public class RealTreeIntegrationTests
         var tree = _factory.CreateTree();
         var container = await _operations.AddContainerAsync(tree, null, "Bulk");
 
-        // Create 100 containers
-        var containers = Enumerable.Range(0, 100)
-            .Select(i => _factory.CreateContainer(name: $"Container_{i}"))
-            .ToList();
+        // Create 100 containers using tuple syntax
+        var containerTuples = Enumerable.Range(0, 100)
+            .Select(i => ((Guid?)Guid.NewGuid(), $"Container_{i}", (IDictionary<string, object>?)new Dictionary<string, object>()))
+            .ToArray();
 
-        await _operations.BulkAddContainersAsync(container, containers);
+        await _operations.BulkAddContainersAsync<RealTreeContainer>(container, containerTuples);
 
-        // Create 100 items
-        var items = Enumerable.Range(0, 100)
-            .Select(i => _factory.CreateItem(name: $"Item_{i}"))
-            .ToList();
+        // Create 100 items using tuple syntax
+        var itemTuples = Enumerable.Range(0, 100)
+            .Select(i => ((Guid?)Guid.NewGuid(), $"Item_{i}", (IDictionary<string, object>?)new Dictionary<string, object>()))
+            .ToArray();
 
-        await _operations.BulkAddItemsAsync(container, items);
+        await _operations.BulkAddItemsAsync<RealTreeItem>(container, itemTuples);
 
         Assert.Equal(100, container.Containers.Count);
         Assert.Equal(100, container.Items.Count);
@@ -187,52 +176,39 @@ public class RealTreeIntegrationTests
     }
 
     [Fact]
-    public async Task NestedActionsAndEvents_ExecuteInCorrectOrder()
+    public async Task NestedActions_ExecuteInCorrectOrder()
     {
         var tree = _factory.CreateTree();
         var executionLog = new List<string>();
 
-        // Tree level
-        tree.RegisterAddContainerAction(async (ctx, next) =>
+        // Tree level - type-based registration
+        // Type-based actions - RealTreeRoot handler
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             executionLog.Add("Tree-Action-Before");
             await next();
             executionLog.Add("Tree-Action-After");
         });
 
-        tree.RegisterContainerAddedEvent(async ctx =>
+        // Type-based actions - RealTreeContainer handler
+        _operations.RegisterAddContainerAction<RealTreeContainer>(async (ctx, next) =>
         {
-            executionLog.Add("Tree-Event");
-            await Task.CompletedTask;
-        });
-
-        var parent = await _operations.AddContainerAsync(tree, null, "Parent");
-        executionLog.Clear();
-
-        // Parent level
-        parent.RegisterAddContainerAction(async (ctx, next) =>
-        {
-            executionLog.Add("Parent-Action-Before");
+            executionLog.Add("Container-Action-Before");
             await next();
-            executionLog.Add("Parent-Action-After");
+            executionLog.Add("Container-Action-After");
         });
 
-        parent.RegisterContainerAddedEvent(async ctx =>
-        {
-            executionLog.Add("Parent-Event");
-            await Task.CompletedTask;
-        });
-
-        await _operations.AddContainerAsync(parent, null, "Child");
-        await Task.Delay(100);
-
-        // Actions execute in hierarchy order (parent first), events fire after
-        Assert.Contains("Parent-Action-Before", executionLog);
+        // Adding to tree (RealTreeRoot) - only Tree actions execute
+        var parent = await _operations.AddContainerAsync(tree, null, "Parent");
         Assert.Contains("Tree-Action-Before", executionLog);
         Assert.Contains("Tree-Action-After", executionLog);
-        Assert.Contains("Parent-Action-After", executionLog);
-        Assert.Contains("Tree-Event", executionLog);
-        Assert.Contains("Parent-Event", executionLog);
+        executionLog.Clear();
+
+        // Adding to parent (RealTreeContainer) - only Container actions execute
+        await _operations.AddContainerAsync(parent, null, "Child");
+        Assert.Contains("Container-Action-Before", executionLog);
+        Assert.Contains("Container-Action-After", executionLog);
+        Assert.DoesNotContain("Tree-Action-Before", executionLog);
     }
 
     [Fact]
@@ -293,13 +269,13 @@ public class RealTreeEdgeCaseTests
         var tree = _factory.CreateTree();
         var actionExecuted = false;
 
-        tree.RegisterBulkAddContainerAction(async (ctx, next) =>
+        _operations.RegisterBulkAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             actionExecuted = true;
             await next();
         });
 
-        await _operations.BulkAddContainersAsync(tree, new List<IRealTreeContainer>());
+        await _operations.BulkAddContainersAsync<RealTreeContainer>(tree, Array.Empty<(Guid? id, string name, IDictionary<string, object>? metadata)>());
 
         Assert.False(actionExecuted);
         Assert.Empty(tree.Containers);
@@ -311,7 +287,7 @@ public class RealTreeEdgeCaseTests
         var tree = _factory.CreateTree();
         var container = await _operations.AddContainerAsync(tree, null, "Container");
 
-        await _operations.BulkAddItemsAsync(container, new List<IRealTreeItem>());
+        await _operations.BulkAddItemsAsync<RealTreeItem>(container, Array.Empty<(Guid? id, string name, IDictionary<string, object>? metadata)>());
 
         Assert.Empty(container.Items);
     }
@@ -451,7 +427,7 @@ public class RealTreeEdgeCaseTests
     {
         var tree = _factory.CreateTree();
 
-        tree.RegisterAddContainerAction(async (ctx, next) =>
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             throw new InvalidOperationException("Blocked");
         });
@@ -468,22 +444,22 @@ public class RealTreeEdgeCaseTests
         var tree = _factory.CreateTree();
         var secondActionExecuted = false;
 
-        // Actions execute in reverse registration order, so register the throwing one last
-        tree.RegisterAddContainerAction(async (ctx, next) =>
+        // First registered action throws - subsequent actions should not execute
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
+        {
+            throw new InvalidOperationException("First action fails");
+        });
+
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             secondActionExecuted = true;
             await next();
         });
 
-        tree.RegisterAddContainerAction(async (ctx, next) =>
-        {
-            throw new InvalidOperationException("First action fails");
-        });
-
         await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await _operations.AddContainerAsync(tree, null, "Test"));
 
-        // Second action (registered first) should not execute because first (registered last) throws
+        // Second action should not execute because first action threw exception
         Assert.False(secondActionExecuted);
     }
 
@@ -493,7 +469,7 @@ public class RealTreeEdgeCaseTests
         var tree = _factory.CreateTree();
         var cts = new CancellationTokenSource();
 
-        tree.RegisterAddContainerAction(async (ctx, next) =>
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             if (ctx.CancellationToken.IsCancellationRequested)
             {
@@ -571,8 +547,8 @@ public class RealTreeEdgeCaseTests
     {
         var tree = _factory.CreateTree();
 
-        var containers = new[] { _factory.CreateContainer(name: "Single") };
-        await _operations.BulkAddContainersAsync(tree, containers);
+        var containerTuples = new[] { ((Guid?)Guid.NewGuid(), "Single", (IDictionary<string, object>?)new Dictionary<string, object>()) };
+        await _operations.BulkAddContainersAsync<RealTreeContainer>(tree, containerTuples);
 
         Assert.Single(tree.Containers);
     }

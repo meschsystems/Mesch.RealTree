@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -10,7 +10,7 @@
 		<!-- Package Information -->
 		<PackageId>Mesch.RealTree</PackageId>
 		<RootNamespace>Mesch.RealTree</RootNamespace>
-		<Version>0.0.4</Version>
+		<Version>0.0.5</Version>
 		<Authors>Mesch Systems</Authors>
 		<Company>Mesch Systems</Company>
 		<Summary>A tree hierarchy management abstraction with plugin architecture and eventing.</Summary>
@@ -43,8 +43,8 @@
 		<AssemblyCompany>Mesch Systems</AssemblyCompany>
 		<AssemblyProduct>RealTree</AssemblyProduct>
 		<AssemblyCopyright>Copyright © 2025 Mesch Systems.</AssemblyCopyright>
-		<AssemblyVersion>0.0.4.0</AssemblyVersion>
-		<FileVersion>0.0.4.0</FileVersion>
+		<AssemblyVersion>0.0.5.0</AssemblyVersion>
+		<FileVersion>0.0.5.0</FileVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>

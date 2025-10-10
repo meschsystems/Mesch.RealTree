@@ -1,4 +1,4 @@
-﻿using Xunit.Abstractions;
+using Xunit.Abstractions;
 
 namespace Mesch.RealTree.Tests;
 
@@ -16,65 +16,6 @@ public class RealTreeRemoveDiagnosticTests
     }
 
     [Fact]
-    public async Task DiagnoseRemove_CheckActualCollection()
-    {
-        var tree = _factory.CreateTree();
-        var container = await _operations.AddContainerAsync(tree, null, "TestContainer");
-
-        var actionExecuted = false;
-
-        // Register action
-        tree.RegisterRemoveContainerAction(async (ctx, next) =>
-        {
-            actionExecuted = true;
-            _output.WriteLine("Action executing!");
-            await next();
-        });
-
-        // Manually replicate CollectFromHierarchy
-        var delegates = new List<RemoveContainerDelegate>();
-        var current = container as IRealTreeNode;
-
-        while (current != null)
-        {
-            var actionsFromNode = current switch
-            {
-                RealTreeContainer cont => cont.RemoveContainerActions,
-                RealTreeItem item => item.RemoveContainerActions,
-                _ => System.Linq.Enumerable.Empty<RemoveContainerDelegate>()
-            };
-
-            _output.WriteLine($"Node {current.Name}: adding {actionsFromNode.Count()} actions");
-            delegates.AddRange(actionsFromNode);
-
-            current = current.Parent;
-        }
-
-        _output.WriteLine($"Total delegates collected: {delegates.Count}");
-
-        // Now test if manually building pipeline works
-        if (delegates.Count > 0)
-        {
-            _output.WriteLine("Building pipeline manually...");
-            Func<Task> coreOp = () =>
-            {
-                _output.WriteLine("Core operation executed!");
-                return Task.CompletedTask;
-            };
-
-            var pipeline = delegates.Aggregate(coreOp, (next, action) =>
-            {
-                return () => (Task)action.DynamicInvoke(new RemoveContainerContext(container, (IRealTreeContainer)tree, tree, default), next)!;
-            });
-
-            _output.WriteLine("Executing pipeline...");
-            await pipeline();
-        }
-
-        _output.WriteLine($"Action was executed: {actionExecuted}");
-    }
-
-    [Fact]
     public async Task DiagnoseRemove_WithAction_ToSeeIfCoreOperationCalled()
     {
         var tree = _factory.CreateTree();
@@ -87,7 +28,7 @@ public class RealTreeRemoveDiagnosticTests
         var coreOperationReached = false;
 
         // Register an action that logs but calls next()
-        tree.RegisterRemoveContainerAction(async (ctx, next) =>
+        _operations.RegisterRemoveContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             actionCalled = true;
             _output.WriteLine($"Action called for {ctx.Container.Name}");

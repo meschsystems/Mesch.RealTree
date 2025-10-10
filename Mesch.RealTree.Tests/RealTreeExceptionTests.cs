@@ -23,7 +23,7 @@ public class RealTreeExceptionTests
 
         // Try to add parent as a child of child - this creates a cycle
         await Assert.ThrowsAsync<CyclicReferenceException>(
-            async () => await _operations.AddContainerAsync(child, parent));
+            async () => child.AddContainer(parent));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class RealTreeExceptionTests
         try
         {
             // Try to add parent to its own child - creates cycle
-            await _operations.AddContainerAsync(child, parent);
+            child.AddContainer(parent);
             Assert.Fail("Expected exception");
         }
         catch (Exception ex)

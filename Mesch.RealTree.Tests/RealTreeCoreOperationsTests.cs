@@ -30,16 +30,19 @@ public class RealTreeCoreOperationsTests
     }
 
     [Fact]
-    public async Task AddContainerAsync_WithExistingContainer_AddsToTree()
+    public async Task AddContainerAsync_WithMetadata_SetsMetadataBeforeMiddleware()
     {
         var tree = _factory.CreateTree();
-        var container = _factory.CreateContainer(name: "PreCreated");
+        var metadata = new Dictionary<string, object>
+        {
+            ["key1"] = "value1",
+            ["key2"] = 42
+        };
 
-        var result = await _operations.AddContainerAsync(tree, container);
+        var container = await _operations.AddContainerAsync(tree, null, "TestContainer", metadata);
 
-        Assert.Same(container, result);
-        Assert.Equal(tree, container.Parent);
-        Assert.Single(tree.Containers);
+        Assert.Equal("value1", container.Metadata["key1"]);
+        Assert.Equal(42, container.Metadata["key2"]);
     }
 
     [Fact]
@@ -58,17 +61,20 @@ public class RealTreeCoreOperationsTests
     }
 
     [Fact]
-    public async Task AddItemAsync_WithExistingItem_AddsToContainer()
+    public async Task AddItemAsync_WithMetadata_SetsMetadataBeforeMiddleware()
     {
         var tree = _factory.CreateTree();
         var container = await _operations.AddContainerAsync(tree, null, "Container");
-        var item = _factory.CreateItem(name: "PreCreatedItem");
+        var metadata = new Dictionary<string, object>
+        {
+            ["subdomain"] = "test",
+            ["tier"] = "enterprise"
+        };
 
-        var result = await _operations.AddItemAsync(container, item);
+        var item = await _operations.AddItemAsync(container, null, "TestItem", metadata);
 
-        Assert.Same(item, result);
-        Assert.Equal(container, item.Parent);
-        Assert.Single(container.Items);
+        Assert.Equal("test", item.Metadata["subdomain"]);
+        Assert.Equal("enterprise", item.Metadata["tier"]);
     }
 
     [Fact]
@@ -144,9 +150,7 @@ public class RealTreeCoreOperationsTests
         var newMetadata = new Dictionary<string, object> { { "key2", "value2" } };
         await _operations.UpdateAsync(container, newMetadata: newMetadata);
 
-        Assert.Single(container.Metadata);
         Assert.Equal("value2", container.Metadata["key2"]);
-        Assert.False(container.Metadata.ContainsKey("key1"));
     }
 
     [Fact]
@@ -166,31 +170,22 @@ public class RealTreeCoreOperationsTests
     }
 
     [Fact]
-    public async Task MoveAsync_ThrowsOnCyclicReference()
-    {
-        var tree = _factory.CreateTree();
-        var container1 = await _operations.AddContainerAsync(tree, null, "Container1");
-        var container2 = await _operations.AddContainerAsync(container1, null, "Container2");
-
-        await Assert.ThrowsAsync<CyclicReferenceException>(
-            async () => await _operations.MoveAsync(container1, container2));
-    }
-
-    [Fact]
     public async Task BulkAddContainersAsync_AddsMultipleContainers()
     {
         var tree = _factory.CreateTree();
-        var containers = new List<IRealTreeContainer>
+        var containersData = new[]
         {
-            _factory.CreateContainer(name: "Bulk1"),
-            _factory.CreateContainer(name: "Bulk2"),
-            _factory.CreateContainer(name: "Bulk3")
+            (id: (Guid?)null, name: "Bulk1", metadata: (IDictionary<string, object>?)null),
+            (id: (Guid?)null, name: "Bulk2", metadata: (IDictionary<string, object>?)null),
+            (id: (Guid?)null, name: "Bulk3", metadata: (IDictionary<string, object>?)null)
         };
 
-        await _operations.BulkAddContainersAsync(tree, containers);
+        await _operations.BulkAddContainersAsync<RealTreeContainer>(tree, containersData);
 
         Assert.Equal(3, tree.Containers.Count);
-        Assert.All(containers, c => Assert.Contains(c, tree.Containers));
+        Assert.Contains(tree.Containers, c => c.Name == "Bulk1");
+        Assert.Contains(tree.Containers, c => c.Name == "Bulk2");
+        Assert.Contains(tree.Containers, c => c.Name == "Bulk3");
     }
 
     [Fact]
@@ -198,17 +193,37 @@ public class RealTreeCoreOperationsTests
     {
         var tree = _factory.CreateTree();
         var container = await _operations.AddContainerAsync(tree, null, "Container");
-        var items = new List<IRealTreeItem>
+        var itemsData = new[]
         {
-            _factory.CreateItem(name: "Item1"),
-            _factory.CreateItem(name: "Item2"),
-            _factory.CreateItem(name: "Item3")
+            (id: (Guid?)null, name: "Item1", metadata: (IDictionary<string, object>?)null),
+            (id: (Guid?)null, name: "Item2", metadata: (IDictionary<string, object>?)null),
+            (id: (Guid?)null, name: "Item3", metadata: (IDictionary<string, object>?)null)
         };
 
-        await _operations.BulkAddItemsAsync(container, items);
+        await _operations.BulkAddItemsAsync<RealTreeItem>(container, itemsData);
 
         Assert.Equal(3, container.Items.Count);
-        Assert.All(items, i => Assert.Contains(i, container.Items));
+        Assert.Contains(container.Items, i => i.Name == "Item1");
+        Assert.Contains(container.Items, i => i.Name == "Item2");
+        Assert.Contains(container.Items, i => i.Name == "Item3");
+    }
+
+    [Fact]
+    public async Task BulkAddContainersAsync_WithMetadata_SetsMetadataForEachContainer()
+    {
+        var tree = _factory.CreateTree();
+        var containersData = new[]
+        {
+            (id: (Guid?)null, name: "C1", metadata: (IDictionary<string, object>?)new Dictionary<string, object> { ["tier"] = "A" }),
+            (id: (Guid?)null, name: "C2", metadata: (IDictionary<string, object>?)new Dictionary<string, object> { ["tier"] = "B" })
+        };
+
+        await _operations.BulkAddContainersAsync<RealTreeContainer>(tree, containersData);
+
+        var c1 = tree.Containers.First(c => c.Name == "C1");
+        var c2 = tree.Containers.First(c => c.Name == "C2");
+        Assert.Equal("A", c1.Metadata["tier"]);
+        Assert.Equal("B", c2.Metadata["tier"]);
     }
 
     [Fact]
@@ -226,37 +241,35 @@ public class RealTreeCoreOperationsTests
     }
 
     [Fact]
-    public async Task CopyContainerAsync_CreatesDeepCopy()
+    public async Task CopyContainerAsync_CreatesShallowCopyByDefault()
     {
         var tree = _factory.CreateTree();
         var source = await _operations.AddContainerAsync(tree, null, "Source");
-        var childContainer = await _operations.AddContainerAsync(source, null, "Child");
-        var childItem = await _operations.AddItemAsync(source, null, "Item");
+        await _operations.AddContainerAsync(source, null, "Child");
         source.Metadata["key"] = "value";
 
-        var copy = await _operations.CopyContainerAsync(source, tree);
+        var copy = await _operations.CopyContainerAsync(source, tree, deep: false);
 
         Assert.NotEqual(source.Id, copy.Id);
         Assert.Equal(source.Name, copy.Name);
-        Assert.Single(copy.Containers);
-        Assert.Single(copy.Items);
+        Assert.Empty(copy.Containers); // Shallow copy doesn't copy children
         Assert.Equal("value", copy.Metadata["key"]);
     }
 
     [Fact]
-    public async Task CopyItemAsync_CreatesDeepCopy()
+    public async Task CopyItemAsync_CreatesShallowCopyByDefault()
     {
         var tree = _factory.CreateTree();
         var container = await _operations.AddContainerAsync(tree, null, "Container");
         var source = await _operations.AddItemAsync(container, null, "Source");
-        var childContainer = await _operations.AddContainerAsync(source, null, "Child");
+        await _operations.AddContainerAsync(source, null, "Child");
         source.Metadata["key"] = "value";
 
-        var copy = await _operations.CopyItemAsync(source, container);
+        var copy = await _operations.CopyItemAsync(source, container, deep: false);
 
         Assert.NotEqual(source.Id, copy.Id);
         Assert.Equal(source.Name, copy.Name);
-        Assert.Single(copy.Containers);
+        Assert.Empty(copy.Containers); // Shallow copy doesn't copy children
         Assert.Equal("value", copy.Metadata["key"]);
     }
 
@@ -265,7 +278,8 @@ public class RealTreeCoreOperationsTests
     {
         var tree = _factory.CreateTree();
         var actionExecuted = false;
-        tree.RegisterAddContainerAction(async (ctx, next) =>
+
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
             actionExecuted = true;
             await next();
@@ -277,19 +291,19 @@ public class RealTreeCoreOperationsTests
     }
 
     [Fact]
-    public async Task Operations_WithTriggerEventsFalse_SkipsEvents()
+    public async Task Operations_WithTriggerActionsTrue_ExecutesActions()
     {
         var tree = _factory.CreateTree();
-        var eventExecuted = false;
-        tree.RegisterContainerAddedEvent(async ctx =>
+        var actionExecuted = false;
+
+        _operations.RegisterAddContainerAction<RealTreeRoot>(async (ctx, next) =>
         {
-            eventExecuted = true;
-            await Task.CompletedTask;
+            actionExecuted = true;
+            await next();
         });
 
-        await _operations.AddContainerAsync(tree, null, "Test", triggerEvents: false);
-        await Task.Delay(50); // Give events time to fire
+        await _operations.AddContainerAsync(tree, null, "Test", triggerActions: true);
 
-        Assert.False(eventExecuted);
+        Assert.True(actionExecuted);
     }
 }

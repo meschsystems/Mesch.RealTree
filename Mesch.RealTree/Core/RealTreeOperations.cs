@@ -1,83 +1,543 @@
-
 using Microsoft.Extensions.Logging;
 
 namespace Mesch.RealTree;
+
 /// <summary>
-/// Implementation of tree operations with middleware actions and event support.
-/// This class provides the core functionality for all tree modifications with extensible pipeline support.
+/// Implementation of tree operations with type-based middleware and event support.
 /// </summary>
 public class RealTreeOperations : IRealTreeOperations
 {
     private readonly IRealTreeFactory _factory;
     private readonly ILogger<RealTreeOperations>? _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the RealTreeOperations class.
-    /// </summary>
-    /// <param name="factory">The factory for creating tree nodes.</param>
-    /// <param name="logger">Optional logger for recording event execution errors.</param>
-    /// <exception cref="ArgumentNullException">Thrown when factory is null.</exception>
+    // Type-based action registries
+    private readonly Dictionary<Type, List<AddContainerDelegate>> _addContainerActionsByType = new();
+    private readonly Dictionary<Type, List<AddItemDelegate>> _addItemActionsByType = new();
+    private readonly Dictionary<Type, List<RemoveContainerDelegate>> _removeContainerActionsByType = new();
+    private readonly Dictionary<Type, List<RemoveItemDelegate>> _removeItemActionsByType = new();
+    private readonly Dictionary<Type, List<UpdateNodeDelegate>> _updateActionsByType = new();
+    private readonly Dictionary<Type, List<BulkAddContainerDelegate>> _bulkAddContainerActionsByType = new();
+    private readonly Dictionary<Type, List<BulkAddItemDelegate>> _bulkAddItemActionsByType = new();
+    private readonly Dictionary<Type, List<BulkRemoveContainerDelegate>> _bulkRemoveActionsByType = new();
+    private readonly Dictionary<Type, List<ListContainerDelegate>> _listContainerActionsByType = new();
+    private readonly Dictionary<Type, List<ShowItemDelegate>> _showItemActionsByType = new();
+
+    // Type-based event registries
+    private readonly Dictionary<Type, List<ContainerAddedEventDelegate>> _containerAddedEventsByType = new();
+    private readonly Dictionary<Type, List<ContainerRemovedEventDelegate>> _containerRemovedEventsByType = new();
+    private readonly Dictionary<Type, List<ItemAddedEventDelegate>> _itemAddedEventsByType = new();
+    private readonly Dictionary<Type, List<ItemRemovedEventDelegate>> _itemRemovedEventsByType = new();
+    private readonly Dictionary<Type, List<NodeUpdatedEventDelegate>> _nodeUpdatedEventsByType = new();
+    private readonly Dictionary<Type, List<NodeMovedEventDelegate>> _nodeMovedEventsByType = new();
+    private readonly Dictionary<Type, List<BulkContainersAddedEventDelegate>> _bulkContainersAddedEventsByType = new();
+    private readonly Dictionary<Type, List<BulkItemsAddedEventDelegate>> _bulkItemsAddedEventsByType = new();
+    private readonly Dictionary<Type, List<BulkNodesRemovedEventDelegate>> _bulkNodesRemovedEventsByType = new();
+    private readonly Dictionary<Type, List<ContainerListedEventDelegate>> _containerListedEventsByType = new();
+    private readonly Dictionary<Type, List<ItemShownEventDelegate>> _itemShownEventsByType = new();
+
     public RealTreeOperations(IRealTreeFactory factory, ILogger<RealTreeOperations>? logger = null)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _logger = logger;
     }
 
-    public async Task<IRealTreeContainer> AddContainerAsync(IRealTreeNode parent, Guid? id, string name, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
+    // ========================================
+    // TYPE-BASED REGISTRATION
+    // ========================================
+
+    public void RegisterAddContainerAction<T>(AddContainerDelegate handler) where T : IRealTreeNode
     {
-        var container = _factory.CreateContainer(id, name);
-        return await AddContainerAsync(parent, container, triggerActions, triggerEvents, cancellationToken);
+        var type = typeof(T);
+        if (!_addContainerActionsByType.ContainsKey(type))
+        {
+            _addContainerActionsByType[type] = new List<AddContainerDelegate>();
+        }
+
+        _addContainerActionsByType[type].Add(handler);
     }
 
-    public async Task<IRealTreeContainer> AddContainerAsync(IRealTreeNode parent, IRealTreeContainer container, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
+    public void RegisterAddItemAction<T>(AddItemDelegate handler) where T : IRealTreeContainer
     {
-        ValidateCyclicReference(container, parent);
+        var type = typeof(T);
+        if (!_addItemActionsByType.ContainsKey(type))
+        {
+            _addItemActionsByType[type] = new List<AddItemDelegate>();
+        }
 
-        var context = new AddContainerContext(container, parent, parent.Tree, cancellationToken);
+        _addItemActionsByType[type].Add(handler);
+    }
 
+    public void RegisterRemoveContainerAction<T>(RemoveContainerDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_removeContainerActionsByType.ContainsKey(type))
+        {
+            _removeContainerActionsByType[type] = new List<RemoveContainerDelegate>();
+        }
+
+        _removeContainerActionsByType[type].Add(handler);
+    }
+
+    public void RegisterRemoveItemAction<T>(RemoveItemDelegate handler) where T : IRealTreeContainer
+    {
+        var type = typeof(T);
+        if (!_removeItemActionsByType.ContainsKey(type))
+        {
+            _removeItemActionsByType[type] = new List<RemoveItemDelegate>();
+        }
+
+        _removeItemActionsByType[type].Add(handler);
+    }
+
+    public void RegisterUpdateAction<T>(UpdateNodeDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_updateActionsByType.ContainsKey(type))
+        {
+            _updateActionsByType[type] = new List<UpdateNodeDelegate>();
+        }
+
+        _updateActionsByType[type].Add(handler);
+    }
+
+
+    public void RegisterBulkAddContainerAction<T>(BulkAddContainerDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_bulkAddContainerActionsByType.ContainsKey(type))
+        {
+            _bulkAddContainerActionsByType[type] = new List<BulkAddContainerDelegate>();
+        }
+
+        _bulkAddContainerActionsByType[type].Add(handler);
+    }
+
+    public void RegisterBulkAddItemAction<T>(BulkAddItemDelegate handler) where T : IRealTreeContainer
+    {
+        var type = typeof(T);
+        if (!_bulkAddItemActionsByType.ContainsKey(type))
+        {
+            _bulkAddItemActionsByType[type] = new List<BulkAddItemDelegate>();
+        }
+
+        _bulkAddItemActionsByType[type].Add(handler);
+    }
+
+    public void RegisterBulkRemoveAction<T>(BulkRemoveContainerDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_bulkRemoveActionsByType.ContainsKey(type))
+        {
+            _bulkRemoveActionsByType[type] = new List<BulkRemoveContainerDelegate>();
+        }
+
+        _bulkRemoveActionsByType[type].Add(handler);
+    }
+
+    public void RegisterListAction<T>(ListContainerDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_listContainerActionsByType.ContainsKey(type))
+        {
+            _listContainerActionsByType[type] = new List<ListContainerDelegate>();
+        }
+
+        _listContainerActionsByType[type].Add(handler);
+    }
+
+    public void RegisterShowItemAction<T>(ShowItemDelegate handler) where T : IRealTreeItem
+    {
+        var type = typeof(T);
+        if (!_showItemActionsByType.ContainsKey(type))
+        {
+            _showItemActionsByType[type] = new List<ShowItemDelegate>();
+        }
+
+        _showItemActionsByType[type].Add(handler);
+    }
+
+    // Deregistration
+    public bool DeregisterAddContainerAction<T>(AddContainerDelegate handler) where T : IRealTreeNode =>
+        _addContainerActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterAddItemAction<T>(AddItemDelegate handler) where T : IRealTreeContainer =>
+        _addItemActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterRemoveContainerAction<T>(RemoveContainerDelegate handler) where T : IRealTreeNode =>
+        _removeContainerActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterRemoveItemAction<T>(RemoveItemDelegate handler) where T : IRealTreeContainer =>
+        _removeItemActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterUpdateAction<T>(UpdateNodeDelegate handler) where T : IRealTreeNode =>
+        _updateActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+
+    public bool DeregisterBulkAddContainerAction<T>(BulkAddContainerDelegate handler) where T : IRealTreeNode =>
+        _bulkAddContainerActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterBulkAddItemAction<T>(BulkAddItemDelegate handler) where T : IRealTreeContainer =>
+        _bulkAddItemActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterBulkRemoveAction<T>(BulkRemoveContainerDelegate handler) where T : IRealTreeNode =>
+        _bulkRemoveActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterListAction<T>(ListContainerDelegate handler) where T : IRealTreeNode =>
+        _listContainerActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterShowItemAction<T>(ShowItemDelegate handler) where T : IRealTreeItem =>
+        _showItemActionsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    // ========================================
+    // EVENT REGISTRATION
+    // ========================================
+
+    public void RegisterContainerAddedEvent<T>(ContainerAddedEventDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_containerAddedEventsByType.ContainsKey(type))
+        {
+            _containerAddedEventsByType[type] = new List<ContainerAddedEventDelegate>();
+        }
+        _containerAddedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterContainerRemovedEvent<T>(ContainerRemovedEventDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_containerRemovedEventsByType.ContainsKey(type))
+        {
+            _containerRemovedEventsByType[type] = new List<ContainerRemovedEventDelegate>();
+        }
+        _containerRemovedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterItemAddedEvent<T>(ItemAddedEventDelegate handler) where T : IRealTreeContainer
+    {
+        var type = typeof(T);
+        if (!_itemAddedEventsByType.ContainsKey(type))
+        {
+            _itemAddedEventsByType[type] = new List<ItemAddedEventDelegate>();
+        }
+        _itemAddedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterItemRemovedEvent<T>(ItemRemovedEventDelegate handler) where T : IRealTreeContainer
+    {
+        var type = typeof(T);
+        if (!_itemRemovedEventsByType.ContainsKey(type))
+        {
+            _itemRemovedEventsByType[type] = new List<ItemRemovedEventDelegate>();
+        }
+        _itemRemovedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterNodeUpdatedEvent<T>(NodeUpdatedEventDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_nodeUpdatedEventsByType.ContainsKey(type))
+        {
+            _nodeUpdatedEventsByType[type] = new List<NodeUpdatedEventDelegate>();
+        }
+        _nodeUpdatedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterNodeMovedEvent<T>(NodeMovedEventDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_nodeMovedEventsByType.ContainsKey(type))
+        {
+            _nodeMovedEventsByType[type] = new List<NodeMovedEventDelegate>();
+        }
+        _nodeMovedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterBulkContainersAddedEvent<T>(BulkContainersAddedEventDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_bulkContainersAddedEventsByType.ContainsKey(type))
+        {
+            _bulkContainersAddedEventsByType[type] = new List<BulkContainersAddedEventDelegate>();
+        }
+        _bulkContainersAddedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterBulkItemsAddedEvent<T>(BulkItemsAddedEventDelegate handler) where T : IRealTreeContainer
+    {
+        var type = typeof(T);
+        if (!_bulkItemsAddedEventsByType.ContainsKey(type))
+        {
+            _bulkItemsAddedEventsByType[type] = new List<BulkItemsAddedEventDelegate>();
+        }
+        _bulkItemsAddedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterBulkNodesRemovedEvent<T>(BulkNodesRemovedEventDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_bulkNodesRemovedEventsByType.ContainsKey(type))
+        {
+            _bulkNodesRemovedEventsByType[type] = new List<BulkNodesRemovedEventDelegate>();
+        }
+        _bulkNodesRemovedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterContainerListedEvent<T>(ContainerListedEventDelegate handler) where T : IRealTreeNode
+    {
+        var type = typeof(T);
+        if (!_containerListedEventsByType.ContainsKey(type))
+        {
+            _containerListedEventsByType[type] = new List<ContainerListedEventDelegate>();
+        }
+        _containerListedEventsByType[type].Add(handler);
+    }
+
+    public void RegisterItemShownEvent<T>(ItemShownEventDelegate handler) where T : IRealTreeItem
+    {
+        var type = typeof(T);
+        if (!_itemShownEventsByType.ContainsKey(type))
+        {
+            _itemShownEventsByType[type] = new List<ItemShownEventDelegate>();
+        }
+        _itemShownEventsByType[type].Add(handler);
+    }
+
+    public bool DeregisterContainerAddedEvent<T>(ContainerAddedEventDelegate handler) where T : IRealTreeNode =>
+        _containerAddedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterContainerRemovedEvent<T>(ContainerRemovedEventDelegate handler) where T : IRealTreeNode =>
+        _containerRemovedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterItemAddedEvent<T>(ItemAddedEventDelegate handler) where T : IRealTreeContainer =>
+        _itemAddedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterItemRemovedEvent<T>(ItemRemovedEventDelegate handler) where T : IRealTreeContainer =>
+        _itemRemovedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterNodeUpdatedEvent<T>(NodeUpdatedEventDelegate handler) where T : IRealTreeNode =>
+        _nodeUpdatedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterNodeMovedEvent<T>(NodeMovedEventDelegate handler) where T : IRealTreeNode =>
+        _nodeMovedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterBulkContainersAddedEvent<T>(BulkContainersAddedEventDelegate handler) where T : IRealTreeNode =>
+        _bulkContainersAddedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterBulkItemsAddedEvent<T>(BulkItemsAddedEventDelegate handler) where T : IRealTreeContainer =>
+        _bulkItemsAddedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterBulkNodesRemovedEvent<T>(BulkNodesRemovedEventDelegate handler) where T : IRealTreeNode =>
+        _bulkNodesRemovedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterContainerListedEvent<T>(ContainerListedEventDelegate handler) where T : IRealTreeNode =>
+        _containerListedEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    public bool DeregisterItemShownEvent<T>(ItemShownEventDelegate handler) where T : IRealTreeItem =>
+        _itemShownEventsByType.TryGetValue(typeof(T), out var list) && list.Remove(handler);
+
+    // ========================================
+    // ADD CONTAINER OPERATIONS
+    // ========================================
+
+    public async Task<T> AddContainerAsync<T>(
+        IRealTreeNode parent,
+        Guid? id,
+        string name,
+        IDictionary<string, object>? metadata = null,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+        where T : IRealTreeContainer, new()
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Create instance using Activator to call constructor with parameters
+        var container = (T)Activator.CreateInstance(typeof(T), id, name)!;
+
+        // Set metadata BEFORE middleware
+        if (metadata != null)
+        {
+            foreach (var kvp in metadata)
+            {
+                container.Metadata[kvp.Key] = kvp.Value;
+            }
+        }
+
+        // Execute type-specific middleware for parent's type
         if (triggerActions)
         {
-            await ExecuteActionPipeline(context, parent, node => GetAddContainerActions(node), () => PerformAddContainer(parent, container));
+            await ExecuteAddContainerActions(parent, container, cancellationToken);
+        }
+
+        // Add to tree - cast parent to appropriate type
+        if (parent is IRealTreeContainer containerParent)
+        {
+            containerParent.AddContainer(container);
+        }
+        else if (parent is IRealTreeItem itemParent)
+        {
+            itemParent.AddContainer(container);
         }
         else
         {
-            await PerformAddContainer(parent, container);
+            throw new InvalidOperationException($"Parent of type {parent.GetType().Name} cannot contain containers");
         }
 
+        // Fire events after successful addition
         if (triggerEvents)
         {
-            await ExecuteEvents(context, parent, node => GetContainerAddedEvents(node));
+            var context = new AddContainerContext(container, parent, parent.Tree, cancellationToken);
+            await FireContainerAddedEvents(parent.GetType(), context);
         }
 
         return container;
     }
 
-    public async Task<IRealTreeItem> AddItemAsync(IRealTreeContainer parent, Guid? id, string name, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
+    public async Task<IRealTreeContainer> AddContainerAsync(
+        IRealTreeNode parent,
+        Guid? id,
+        string name,
+        IDictionary<string, object>? metadata = null,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
     {
-        var item = _factory.CreateItem(id, name);
-        return await AddItemAsync(parent, item, triggerActions, triggerEvents, cancellationToken);
-    }
+        cancellationToken.ThrowIfCancellationRequested();
 
-    public async Task<IRealTreeItem> AddItemAsync(IRealTreeContainer parent, IRealTreeItem item, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
-    {
-        var context = new AddItemContext(item, parent, parent.Tree, cancellationToken);
+        // Create instance using factory
+        var container = _factory.CreateContainer(id, name);
 
+        // Set metadata BEFORE middleware
+        if (metadata != null)
+        {
+            foreach (var kvp in metadata)
+            {
+                container.Metadata[kvp.Key] = kvp.Value;
+            }
+        }
+
+        // Execute type-specific middleware for parent's type
         if (triggerActions)
         {
-            await ExecuteActionPipeline(context, parent, node => GetAddItemActions(node), () => PerformAddItem(parent, item));
+            await ExecuteAddContainerActions(parent, container, cancellationToken);
+        }
+
+        // Add to tree - cast parent to appropriate type
+        if (parent is IRealTreeContainer containerParent)
+        {
+            containerParent.AddContainer(container);
+        }
+        else if (parent is IRealTreeItem itemParent)
+        {
+            itemParent.AddContainer(container);
         }
         else
         {
-            await PerformAddItem(parent, item);
+            throw new InvalidOperationException($"Parent of type {parent.GetType().Name} cannot contain containers");
         }
 
+        // Fire events after successful addition
         if (triggerEvents)
         {
-            await ExecuteEvents(context, parent, node => GetItemAddedEvents(node));
+            var context = new AddContainerContext(container, parent, parent.Tree, cancellationToken);
+            await FireContainerAddedEvents(parent.GetType(), context);
+        }
+
+        return container;
+    }
+
+    // ========================================
+    // ADD ITEM OPERATIONS
+    // ========================================
+
+    public async Task<T> AddItemAsync<T>(
+        IRealTreeContainer parent,
+        Guid? id,
+        string name,
+        IDictionary<string, object>? metadata = null,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+        where T : IRealTreeItem, new()
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Create instance using Activator to call constructor with parameters
+        var item = (T)Activator.CreateInstance(typeof(T), id, name)!;
+
+        // Set metadata BEFORE middleware
+        if (metadata != null)
+        {
+            foreach (var kvp in metadata)
+            {
+                item.Metadata[kvp.Key] = kvp.Value;
+            }
+        }
+
+        // Execute type-specific middleware for parent's type
+        if (triggerActions)
+        {
+            await ExecuteAddItemActions(parent, item, cancellationToken);
+        }
+
+        // Add to tree
+        parent.AddItem(item);
+
+        // Fire events after successful addition
+        if (triggerEvents)
+        {
+            var context = new AddItemContext(item, parent, parent.Tree, cancellationToken);
+            await FireItemAddedEvents(parent.GetType(), context);
         }
 
         return item;
     }
+
+    public async Task<IRealTreeItem> AddItemAsync(
+        IRealTreeContainer parent,
+        Guid? id,
+        string name,
+        IDictionary<string, object>? metadata = null,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Create instance using factory
+        var item = _factory.CreateItem(id, name);
+
+        // Set metadata BEFORE middleware
+        if (metadata != null)
+        {
+            foreach (var kvp in metadata)
+            {
+                item.Metadata[kvp.Key] = kvp.Value;
+            }
+        }
+
+        // Execute type-specific middleware for parent's type
+        if (triggerActions)
+        {
+            await ExecuteAddItemActions(parent, item, cancellationToken);
+        }
+
+        // Add to tree
+        parent.AddItem(item);
+
+        // Fire events after successful addition
+        if (triggerEvents)
+        {
+            var eventContext = new AddItemContext(item, parent, parent.Tree, cancellationToken);
+            await FireItemAddedEvents(parent.GetType(), eventContext);
+        }
+
+        return item;
+    }
+
+    // ========================================
+    // REMOVE OPERATIONS
+    // ========================================
 
     public async Task RemoveAsync(
         IRealTreeNode node,
@@ -85,71 +545,96 @@ public class RealTreeOperations : IRealTreeOperations
         bool triggerEvents = true,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (node.Parent == null)
         {
             throw new InvalidOperationException("Cannot remove root node");
         }
 
-        if (node is IRealTreeContainer container)
+        // Execute middleware
+        if (triggerActions)
         {
-            var parentContainer = node.Parent as IRealTreeContainer
-                ?? throw new InvalidOperationException("Container parent must be a container");
-            var context = new RemoveContainerContext(container, parentContainer, node.Tree, cancellationToken);
-
-            if (triggerActions)
+            if (node is IRealTreeContainer container)
             {
-                await ExecuteActionPipeline(context, node, n => GetRemoveContainerActions(n), () => { PerformRemove(node); return Task.CompletedTask; });
+                await ExecuteRemoveContainerActions(node.Parent, container, cancellationToken);
             }
-            else
+            else if (node is IRealTreeItem item && node.Parent is IRealTreeContainer parentContainer)
             {
-                PerformRemove(node);
-            }
-
-            if (triggerEvents)
-            {
-                await ExecuteEvents(context, context.Parent, n => GetContainerRemovedEvents(n));
+                await ExecuteRemoveItemActions(parentContainer, item, cancellationToken);
             }
         }
-        else if (node is IRealTreeItem item)
+
+        // Remove from tree
+        var parent = node.Parent;
+        if (node is IRealTreeContainer c)
         {
-            var parentContainer = node.Parent as IRealTreeContainer
-                ?? throw new InvalidOperationException("Item parent must be a container");
-            var context = new RemoveItemContext(item, parentContainer, node.Tree, cancellationToken);
+            if (node.Parent is IRealTreeContainer containerParent)
+            {
+                containerParent.RemoveContainer(c);
+            }
+            else if (node.Parent is IRealTreeItem itemParent)
+            {
+                itemParent.RemoveContainer(c);
+            }
+        }
+        else if (node is IRealTreeItem i && node.Parent is IRealTreeContainer pc)
+        {
+            pc.RemoveItem(i);
+        }
 
-            if (triggerActions)
+        // Fire events after successful removal
+        if (triggerEvents)
+        {
+            if (node is IRealTreeContainer container && parent is IRealTreeContainer containerParent)
             {
-                await ExecuteActionPipeline(context, node, n => GetRemoveItemActions(n), () => { PerformRemove(node); return Task.CompletedTask; });
+                var context = new RemoveContainerContext(container, containerParent, parent.Tree, cancellationToken);
+                await FireContainerRemovedEvents(parent.GetType(), context);
             }
-            else
+            else if (node is IRealTreeItem item && parent is IRealTreeContainer itemContainerParent)
             {
-                PerformRemove(node);
+                var context = new RemoveItemContext(item, itemContainerParent, parent.Tree, cancellationToken);
+                await FireItemRemovedEvents(parent.GetType(), context);
             }
+        }
+    }
 
-            if (triggerEvents)
-            {
-                await ExecuteEvents(context, context.Parent, n => GetItemRemovedEvents(n));
-            }
+    public async Task RemoveAllContainersAsync(
+        IRealTreeNode parent,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        IReadOnlyList<IRealTreeContainer> containers;
+        if (parent is IRealTreeContainer containerParent)
+        {
+            containers = containerParent.Containers;
+        }
+        else if (parent is IRealTreeItem itemParent)
+        {
+            containers = itemParent.Containers;
         }
         else
         {
-            throw new InvalidOperationException("Node must be a container or item");
+            throw new InvalidOperationException($"Parent type {parent.GetType().Name} does not support containers");
         }
-    }
 
-    public async Task RemoveAllContainersAsync(IRealTreeNode parent, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
-    {
-        var containers = parent is IRealTreeContainer container ? container.Containers.ToList() :
-                        parent is IRealTreeItem item ? item.Containers.ToList() :
-                        new List<IRealTreeContainer>();
-
-        foreach (var containerToRemove in containers)
+        foreach (var container in containers.ToList())
         {
-            await RemoveAsync(containerToRemove, triggerActions, triggerEvents, cancellationToken);
+            await RemoveAsync(container, triggerActions, triggerEvents, cancellationToken);
         }
     }
 
-    public async Task RemoveAllItemsAsync(IRealTreeContainer parent, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
+    public async Task RemoveAllItemsAsync(
+        IRealTreeContainer parent,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var items = parent.Items.ToList();
         foreach (var item in items)
         {
@@ -157,477 +642,31 @@ public class RealTreeOperations : IRealTreeOperations
         }
     }
 
-    public async Task UpdateAsync(IRealTreeNode node, string? newName = null, Dictionary<string, object>? newMetadata = null, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
+    // ========================================
+    // UPDATE OPERATIONS
+    // ========================================
+
+    public async Task UpdateAsync(
+        IRealTreeNode node,
+        string? newName = null,
+        Dictionary<string, object>? newMetadata = null,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Capture old values before update
         var oldName = node.Name;
         var oldMetadata = new Dictionary<string, object>(node.Metadata);
 
-        var context = new UpdateContext(node, oldName, newName, oldMetadata, newMetadata, node.Tree, cancellationToken);
-
+        // Execute middleware
         if (triggerActions)
         {
-            await ExecuteActionPipeline(context, node, n => GetUpdateActions(n), () => { PerformUpdate(node, newName, newMetadata); return Task.CompletedTask; });
-        }
-        else
-        {
-            PerformUpdate(node, newName, newMetadata);
+            await ExecuteUpdateActions(node, newName, newMetadata, cancellationToken);
         }
 
-        if (triggerEvents)
-        {
-            await ExecuteEvents(context, node, n => GetNodeUpdatedEvents(n));
-        }
-    }
-
-    public async Task MoveAsync(IRealTreeNode node, IRealTreeNode newParent, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
-    {
-        ValidateCyclicReference(node, newParent);
-
-        var oldParent = node.Parent;
-        var context = new MoveContext(node, oldParent, newParent, node.Tree, cancellationToken);
-
-        if (triggerActions)
-        {
-            await ExecuteActionPipeline(context, node, n => GetMoveActions(n), () => { PerformMove(node, newParent); return Task.CompletedTask; });
-        }
-        else
-        {
-            PerformMove(node, newParent);
-        }
-
-        if (triggerEvents)
-        {
-            await ExecuteEvents(context, node, n => GetNodeMovedEvents(n));
-        }
-    }
-
-    public async Task<IRealTreeContainer> CopyContainerAsync(IRealTreeContainer source, IRealTreeNode destination, Guid? newId = null, string? newName = null, CancellationToken cancellationToken = default)
-    {
-        var copy = _factory.CreateContainer(newId, newName ?? source.Name);
-
-        // Copy metadata
-        foreach (var kvp in source.Metadata)
-        {
-            copy.Metadata[kvp.Key] = kvp.Value;
-        }
-
-        await AddContainerAsync(destination, copy, true, true, cancellationToken);
-
-        // Recursively copy children
-        foreach (var childContainer in source.Containers)
-        {
-            await CopyContainerAsync(childContainer, copy, cancellationToken: cancellationToken);
-        }
-
-        foreach (var childItem in source.Items)
-        {
-            await CopyItemAsync(childItem, copy, cancellationToken: cancellationToken);
-        }
-
-        return copy;
-    }
-
-    // Bulk operations implementation
-    public async Task BulkAddContainersAsync(IRealTreeNode parent, IEnumerable<IRealTreeContainer> containers, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
-    {
-        var containersList = containers.ToList();
-        if (!containersList.Any())
-        {
-            return;
-        }
-
-        // Validate cycle prevention for all containers
-        foreach (var container in containersList)
-        {
-            ValidateCyclicReference(container, parent);
-        }
-
-        var context = new BulkAddContainerContext(containersList, parent, parent.Tree, cancellationToken);
-
-        if (triggerActions)
-        {
-            await ExecuteActionPipeline(context, parent, node => GetBulkAddContainerActions(node), () => PerformBulkAddContainers(parent, containersList));
-        }
-        else
-        {
-            await PerformBulkAddContainers(parent, containersList);
-        }
-
-        if (triggerEvents)
-        {
-            await ExecuteEvents(context, parent, node => GetBulkContainersAddedEvents(node));
-        }
-    }
-
-    public async Task BulkAddItemsAsync(IRealTreeContainer parent, IEnumerable<IRealTreeItem> items, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
-    {
-        var itemsList = items.ToList();
-        if (!itemsList.Any())
-        {
-            return;
-        }
-
-        var context = new BulkAddItemContext(itemsList, parent, parent.Tree, cancellationToken);
-
-        if (triggerActions)
-        {
-            await ExecuteActionPipeline(context, parent, node => GetBulkAddItemActions(node), () => PerformBulkAddItems(parent, itemsList));
-        }
-        else
-        {
-            await PerformBulkAddItems(parent, itemsList);
-        }
-
-        if (triggerEvents)
-        {
-            await ExecuteEvents(context, parent, node => GetBulkItemsAddedEvents(node));
-        }
-    }
-
-    public async Task BulkRemoveAsync(IEnumerable<IRealTreeNode> nodes, bool triggerActions = true, bool triggerEvents = true, CancellationToken cancellationToken = default)
-    {
-        var nodesList = nodes.ToList();
-        if (!nodesList.Any())
-        {
-            return;
-        }
-
-        // Group by parent for context creation
-        var nodesByParent = nodesList.Where(n => n.Parent != null).GroupBy(n => n.Parent!);
-
-        foreach (var parentGroup in nodesByParent)
-        {
-            var context = new BulkRemoveContext(parentGroup.ToList(), parentGroup.Key, parentGroup.First().Tree, cancellationToken);
-
-            if (triggerActions)
-            {
-                await ExecuteActionPipeline(context, parentGroup.Key, node => GetBulkRemoveActions(node), () => { PerformBulkRemove(parentGroup.ToList()); return Task.CompletedTask; });
-            }
-            else
-            {
-                PerformBulkRemove(parentGroup.ToList());
-            }
-
-            if (triggerEvents)
-            {
-                await ExecuteEvents(context, parentGroup.Key, node => GetBulkNodesRemovedEvents(node));
-            }
-        }
-    }
-
-    public async Task<IRealTreeItem> CopyItemAsync(IRealTreeItem source, IRealTreeContainer destination, Guid? newId = null, string? newName = null, CancellationToken cancellationToken = default)
-    {
-        var copy = _factory.CreateItem(newId, newName ?? source.Name);
-
-        // Copy metadata
-        foreach (var kvp in source.Metadata)
-        {
-            copy.Metadata[kvp.Key] = kvp.Value;
-        }
-
-        await AddItemAsync(destination, copy, true, true, cancellationToken);
-
-        // Recursively copy child containers
-        foreach (var childContainer in source.Containers)
-        {
-            await CopyContainerAsync(childContainer, copy, cancellationToken: cancellationToken);
-        }
-
-        return copy;
-    }
-
-    // Cycle detection and prevention
-    private void ValidateCyclicReference(IRealTreeNode nodeToAdd, IRealTreeNode targetParent)
-    {
-        // If nodeToAdd is an ancestor of targetParent, adding it would create a cycle
-        var current = targetParent;
-        while (current != null)
-        {
-            if (current.Id == nodeToAdd.Id)
-            {
-                throw new CyclicReferenceException();
-            }
-            current = current.Parent;
-        }
-    }
-
-    // Helper methods for action pipeline execution (middleware with next() calls)
-    private async Task ExecuteActionPipeline<TContext, TDelegate>(TContext context, IRealTreeNode startNode,
-        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates, Func<Task> coreOperation)
-        where TContext : OperationContext
-        where TDelegate : Delegate
-    {
-        var actions = CollectFromHierarchy(startNode, getDelegates);
-
-        if (actions.Count == 0)
-        {
-            await coreOperation();
-            return;
-        }
-
-        // Build middleware pipeline
-        var pipeline = actions.Aggregate(coreOperation, (next, action) =>
-        {
-            return () => (Task)action.DynamicInvoke(context, next)!;
-        });
-
-        await pipeline();
-    }
-
-    // Helper methods for event execution (fire-and-forget notifications with exception logging)
-    private async Task ExecuteEvents<TContext, TDelegate>(TContext context, IRealTreeNode startNode,
-        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates)
-        where TContext : OperationContext
-        where TDelegate : Delegate
-    {
-        var events = CollectFromHierarchy(startNode, getDelegates);
-
-        if (events.Count == 0)
-        {
-            return;
-        }
-
-        // Execute all events in parallel (fire-and-forget with error logging)
-        var tasks = events.Select(async eventDelegate =>
-        {
-            try
-            {
-                await (Task)eventDelegate.DynamicInvoke(context)!;
-            }
-            catch (Exception ex)
-            {
-                // Log event execution errors but don't propagate them
-                _logger?.LogError(ex, "Event handler failed during {OperationType} operation", context.GetType().Name);
-            }
-        });
-
-        try
-        {
-            await Task.WhenAll(tasks);
-        }
-        catch
-        {
-            // Events are fire-and-forget, exceptions are already logged above
-        }
-    }
-
-    private List<T> CollectFromHierarchy<T>(IRealTreeNode startNode, Func<IRealTreeNode, IEnumerable<T>> getDelegates)
-    {
-        var delegates = new List<T>();
-        var current = startNode;
-
-        // Collect delegates from node hierarchy (bottom-up)
-        while (current != null)
-        {
-            delegates.AddRange(getDelegates(current));
-            current = current.Parent;
-        }
-
-        return delegates;
-    }
-
-    // Action delegate getters
-    private IEnumerable<AddContainerDelegate> GetAddContainerActions(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.AddContainerActions,
-            RealTreeItem item => item.AddContainerActions,
-            _ => Enumerable.Empty<AddContainerDelegate>()
-        };
-    }
-
-    private IEnumerable<AddItemDelegate> GetAddItemActions(IRealTreeNode node)
-    {
-        return node is RealTreeContainer container ? container.AddItemActions : Enumerable.Empty<AddItemDelegate>();
-    }
-
-    private IEnumerable<RemoveContainerDelegate> GetRemoveContainerActions(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.RemoveContainerActions,
-            RealTreeItem item => item.RemoveContainerActions,
-            _ => Enumerable.Empty<RemoveContainerDelegate>()
-        };
-    }
-
-    private IEnumerable<RemoveItemDelegate> GetRemoveItemActions(IRealTreeNode node)
-    {
-        return node is RealTreeContainer container ? container.RemoveItemActions : Enumerable.Empty<RemoveItemDelegate>();
-    }
-
-    private IEnumerable<UpdateNodeDelegate> GetUpdateActions(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.UpdateActions,
-            RealTreeItem item => item.UpdateActions,
-            _ => Enumerable.Empty<UpdateNodeDelegate>()
-        };
-    }
-
-    private IEnumerable<MoveNodeDelegate> GetMoveActions(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.MoveActions,
-            RealTreeItem item => item.MoveActions,
-            _ => Enumerable.Empty<MoveNodeDelegate>()
-        };
-    }
-
-    // Event delegate getters
-    private IEnumerable<ContainerAddedEventDelegate> GetContainerAddedEvents(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.ContainerAddedEvents,
-            RealTreeItem item => item.ContainerAddedEvents,
-            _ => Enumerable.Empty<ContainerAddedEventDelegate>()
-        };
-    }
-
-    private IEnumerable<ItemAddedEventDelegate> GetItemAddedEvents(IRealTreeNode node)
-    {
-        return node is RealTreeContainer container ? container.ItemAddedEvents : Enumerable.Empty<ItemAddedEventDelegate>();
-    }
-
-    private IEnumerable<ContainerRemovedEventDelegate> GetContainerRemovedEvents(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.ContainerRemovedEvents,
-            RealTreeItem item => item.ContainerRemovedEvents,
-            _ => Enumerable.Empty<ContainerRemovedEventDelegate>()
-        };
-    }
-
-    private IEnumerable<ItemRemovedEventDelegate> GetItemRemovedEvents(IRealTreeNode node)
-    {
-        return node is RealTreeContainer container ? container.ItemRemovedEvents : Enumerable.Empty<ItemRemovedEventDelegate>();
-    }
-
-    private IEnumerable<NodeUpdatedEventDelegate> GetNodeUpdatedEvents(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.NodeUpdatedEvents,
-            RealTreeItem item => item.NodeUpdatedEvents,
-            _ => Enumerable.Empty<NodeUpdatedEventDelegate>()
-        };
-    }
-
-    private IEnumerable<NodeMovedEventDelegate> GetNodeMovedEvents(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.NodeMovedEvents,
-            RealTreeItem item => item.NodeMovedEvents,
-            _ => Enumerable.Empty<NodeMovedEventDelegate>()
-        };
-    }
-
-    // Bulk action delegate getters
-    private IEnumerable<BulkAddContainerDelegate> GetBulkAddContainerActions(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.BulkAddContainerActions,
-            RealTreeItem item => item.BulkAddContainerActions,
-            _ => Enumerable.Empty<BulkAddContainerDelegate>()
-        };
-    }
-
-    private IEnumerable<BulkAddItemDelegate> GetBulkAddItemActions(IRealTreeNode node)
-    {
-        return node is RealTreeContainer container ? container.BulkAddItemActions : Enumerable.Empty<BulkAddItemDelegate>();
-    }
-
-    private IEnumerable<BulkRemoveContainerDelegate> GetBulkRemoveActions(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.BulkRemoveActions,
-            RealTreeItem item => item.BulkRemoveActions,
-            _ => Enumerable.Empty<BulkRemoveContainerDelegate>()
-        };
-    }
-
-    // Bulk event delegate getters
-    private IEnumerable<BulkContainersAddedEventDelegate> GetBulkContainersAddedEvents(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.BulkContainersAddedEvents,
-            RealTreeItem item => item.BulkContainersAddedEvents,
-            _ => Enumerable.Empty<BulkContainersAddedEventDelegate>()
-        };
-    }
-
-    private IEnumerable<BulkItemsAddedEventDelegate> GetBulkItemsAddedEvents(IRealTreeNode node)
-    {
-        return node is RealTreeContainer container ? container.BulkItemsAddedEvents : Enumerable.Empty<BulkItemsAddedEventDelegate>();
-    }
-
-    private IEnumerable<BulkNodesRemovedEventDelegate> GetBulkNodesRemovedEvents(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.BulkNodesRemovedEvents,
-            RealTreeItem item => item.BulkNodesRemovedEvents,
-            _ => Enumerable.Empty<BulkNodesRemovedEventDelegate>()
-        };
-    }
-
-    // Core operation implementations
-    private Task PerformAddContainer(IRealTreeNode parent, IRealTreeContainer container)
-    {
-        switch (parent)
-        {
-            case IRealTreeContainer parentContainer:
-                parentContainer.AddContainer(container);
-                break;
-            case IRealTreeItem parentItem:
-                parentItem.AddContainer(container);
-                break;
-            default:
-                throw new ArgumentException("Parent must be a container or item", nameof(parent));
-        }
-        return Task.CompletedTask;
-    }
-
-    private Task PerformAddItem(IRealTreeContainer parent, IRealTreeItem item)
-    {
-        parent.AddItem(item);
-        return Task.CompletedTask;
-    }
-
-    private void PerformRemove(IRealTreeNode node)
-    {
-        if (node.Parent == null)
-        {
-            throw new InvalidOperationException("Cannot remove root node");
-        }
-
-        switch (node.Parent)
-        {
-            case IRealTreeContainer parentContainer when node is IRealTreeContainer container:
-                parentContainer.RemoveContainer(container);
-                break;
-            case IRealTreeContainer parentContainer when node is IRealTreeItem item:
-                parentContainer.RemoveItem(item);
-                break;
-            case IRealTreeItem parentItem when node is IRealTreeContainer container:
-                parentItem.RemoveContainer(container);
-                break;
-            default:
-                throw new InvalidOperationException("Invalid parent-child relationship");
-        }
-    }
-
-    private void PerformUpdate(IRealTreeNode node, string? newName, Dictionary<string, object>? newMetadata)
-    {
+        // Apply changes
         if (newName != null)
         {
             node.Name = newName;
@@ -641,89 +680,408 @@ public class RealTreeOperations : IRealTreeOperations
                 node.Metadata[kvp.Key] = kvp.Value;
             }
         }
-    }
 
-    private void PerformMove(IRealTreeNode node, IRealTreeNode newParent)
-    {
-        // Remove from current parent
-        if (node.Parent != null)
+        // Fire events after successful update
+        if (triggerEvents)
         {
-            PerformRemove(node);
-        }
-
-        // Add to new parent
-        switch (newParent)
-        {
-            case IRealTreeContainer parentContainer when node is IRealTreeContainer container:
-                parentContainer.AddContainer(container);
-                break;
-            case IRealTreeContainer parentContainer when node is IRealTreeItem item:
-                parentContainer.AddItem(item);
-                break;
-            case IRealTreeItem parentItem when node is IRealTreeContainer container:
-                parentItem.AddContainer(container);
-                break;
-            default:
-                throw new ArgumentException("Invalid move operation: incompatible parent-child types", nameof(newParent));
+            var context = new UpdateContext(node, oldName, newName ?? node.Name, oldMetadata, newMetadata, node.Tree, cancellationToken);
+            await FireNodeUpdatedEvents(node.GetType(), context);
         }
     }
 
-    // Core bulk operation implementations
-    private Task PerformBulkAddContainers(IRealTreeNode parent, IReadOnlyList<IRealTreeContainer> containers)
+    // ========================================
+    // MOVE OPERATIONS
+    // ========================================
+
+    public async Task MoveAsync(
+        IRealTreeNode node,
+        IRealTreeNode newParent,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
     {
-        foreach (var container in containers)
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (node.Parent == null)
         {
-            switch (parent)
+            throw new InvalidOperationException("Cannot move root node");
+        }
+
+        // Validate cyclic references
+        if (node == newParent)
+        {
+            throw new CyclicReferenceException("Cannot move node to itself");
+        }
+
+        if (IsAncestorOf(node, newParent))
+        {
+            throw new CyclicReferenceException("Cannot move node to its own descendant - this would create a cycle");
+        }
+
+        var oldParent = node.Parent;
+
+        // Move is now implemented as a transactional remove + add
+        using var transaction = new RealTreeTransaction();
+
+        try
+        {
+            if (node is IRealTreeContainer container)
             {
-                case IRealTreeContainer parentContainer:
-                    parentContainer.AddContainer(container);
-                    break;
-                case IRealTreeItem parentItem:
-                    parentItem.AddContainer(container);
-                    break;
-                default:
-                    throw new ArgumentException("Parent must be a container or item", nameof(parent));
+                // Execute remove middleware
+                if (triggerActions)
+                {
+                    await ExecuteRemoveContainerActions(oldParent, container, cancellationToken, transaction);
+                }
+
+                // Record structural remove operation
+                transaction.RecordStructuralOperation(tx =>
+                {
+                    if (oldParent is IRealTreeContainer oldParentContainer)
+                    {
+                        oldParentContainer.RemoveContainer(container);
+                    }
+                    else if (oldParent is IRealTreeItem oldParentItem)
+                    {
+                        oldParentItem.RemoveContainer(container);
+                    }
+                });
+
+                // Execute add middleware
+                if (triggerActions)
+                {
+                    await ExecuteAddContainerActions(newParent, container, cancellationToken, transaction);
+                }
+
+                // Record structural add operation
+                transaction.RecordStructuralOperation(tx =>
+                {
+                    if (newParent is IRealTreeContainer newParentContainer)
+                    {
+                        newParentContainer.AddContainer(container);
+                    }
+                    else if (newParent is IRealTreeItem newParentItem)
+                    {
+                        newParentItem.AddContainer(container);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Cannot move container to parent of type {newParent.GetType().Name}");
+                    }
+                });
+            }
+            else if (node is IRealTreeItem item)
+            {
+                if (!(oldParent is IRealTreeContainer oldParentContainer) || !(newParent is IRealTreeContainer newParentContainer))
+                {
+                    throw new InvalidOperationException("Cannot move item to/from non-container parent");
+                }
+
+                // Execute remove middleware
+                if (triggerActions)
+                {
+                    await ExecuteRemoveItemActions(oldParentContainer, item, cancellationToken);
+                }
+
+                // Record structural remove operation
+                transaction.RecordStructuralOperation(tx =>
+                {
+                    oldParentContainer.RemoveItem(item);
+                });
+
+                // Execute add middleware
+                if (triggerActions)
+                {
+                    await ExecuteAddItemActions(newParentContainer, item, cancellationToken);
+                }
+
+                // Record structural add operation
+                transaction.RecordStructuralOperation(tx =>
+                {
+                    newParentContainer.AddItem(item);
+                });
+            }
+
+            // Commit the transaction - this executes all structural operations
+            await transaction.CommitAsync();
+
+            // Fire events after successful move
+            if (triggerEvents)
+            {
+                var context = new MoveContext(node, oldParent, newParent, node.Tree, cancellationToken);
+                await FireNodeMovedEvents(node.GetType(), context);
             }
         }
-        return Task.CompletedTask;
-    }
-
-    private Task PerformBulkAddItems(IRealTreeContainer parent, IReadOnlyList<IRealTreeItem> items)
-    {
-        foreach (var item in items)
+        catch
         {
-            parent.AddItem(item);
-        }
-        return Task.CompletedTask;
-    }
-
-    private void PerformBulkRemove(IReadOnlyList<IRealTreeNode> nodes)
-    {
-        foreach (var node in nodes)
-        {
-            if (node.Parent == null)
-            {
-                continue; // Skip nodes without parents (like root)
-            }
-
-            switch (node.Parent)
-            {
-                case IRealTreeContainer parentContainer when node is IRealTreeContainer container:
-                    parentContainer.RemoveContainer(container);
-                    break;
-                case IRealTreeContainer parentContainer when node is IRealTreeItem item:
-                    parentContainer.RemoveItem(item);
-                    break;
-                case IRealTreeItem parentItem when node is IRealTreeContainer container:
-                    parentItem.RemoveContainer(container);
-                    break;
-            }
+            // Transaction will auto-rollback on exception via Dispose
+            throw;
         }
     }
 
-    // Query operations implementation
-    public async Task<IReadOnlyList<IRealTreeNode>> ListContainerAsync(
-        IRealTreeContainer container,
+    // ========================================
+    // BULK OPERATIONS
+    // ========================================
+
+    public async Task BulkAddContainersAsync<T>(
+        IRealTreeNode parent,
+        IEnumerable<(Guid? id, string name, IDictionary<string, object>? metadata)> items,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+        where T : IRealTreeContainer, new()
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var itemsList = items.ToList();
+
+        // Skip if empty list
+        if (itemsList.Count == 0)
+        {
+            return;
+        }
+
+        // Execute bulk middleware if registered
+        if (triggerActions)
+        {
+            await ExecuteBulkAddContainerActions(parent, itemsList, cancellationToken);
+        }
+
+        // Track added containers for event firing
+        var addedContainers = new List<IRealTreeContainer>();
+
+        // Add each container
+        foreach (var (id, name, metadata) in itemsList)
+        {
+            var container = await AddContainerAsync<T>(parent, id, name, metadata, triggerActions: false, triggerEvents: false, cancellationToken);
+            addedContainers.Add(container);
+        }
+
+        // Fire events after successful bulk addition
+        if (triggerEvents)
+        {
+            var context = new BulkAddContainerContext(addedContainers.AsReadOnly(), parent, parent.Tree, cancellationToken);
+            await FireBulkContainersAddedEvents(parent.GetType(), context);
+        }
+    }
+
+    public async Task BulkAddItemsAsync<T>(
+        IRealTreeContainer parent,
+        IEnumerable<(Guid? id, string name, IDictionary<string, object>? metadata)> items,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+        where T : IRealTreeItem, new()
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var itemsList = items.ToList();
+
+        // Skip if empty list
+        if (itemsList.Count == 0)
+        {
+            return;
+        }
+
+        // Execute bulk middleware if registered
+        if (triggerActions)
+        {
+            await ExecuteBulkAddItemActions(parent, itemsList, cancellationToken);
+        }
+
+        // Track added items for event firing
+        var addedItems = new List<IRealTreeItem>();
+
+        // Add each item
+        foreach (var (id, name, metadata) in itemsList)
+        {
+            var item = await AddItemAsync<T>(parent, id, name, metadata, triggerActions: false, triggerEvents: false, cancellationToken);
+            addedItems.Add(item);
+        }
+
+        // Fire events after successful bulk addition
+        if (triggerEvents)
+        {
+            var context = new BulkAddItemContext(addedItems.AsReadOnly(), parent, parent.Tree, cancellationToken);
+            await FireBulkItemsAddedEvents(parent.GetType(), context);
+        }
+    }
+
+    public async Task BulkRemoveAsync(
+        IEnumerable<IRealTreeNode> nodes,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var nodesList = nodes.ToList();
+        var nodesToRemove = nodesList.ToList(); // Create a copy for event context
+
+        // Execute bulk middleware if registered
+        if (triggerActions && nodesList.Count > 0)
+        {
+            var parent = nodesList[0].Parent;
+            if (parent != null)
+            {
+                await ExecuteBulkRemoveActions(parent, nodesList, cancellationToken);
+            }
+        }
+
+        // Get parent before removal (use first node's parent)
+        var parentNode = nodesList.Count > 0 ? nodesList[0].Parent : null;
+
+        // Remove each node
+        foreach (var node in nodesList)
+        {
+            await RemoveAsync(node, triggerActions: false, triggerEvents: false, cancellationToken);
+        }
+
+        // Fire events after successful bulk removal
+        if (triggerEvents && nodesToRemove.Count > 0 && parentNode != null)
+        {
+            var context = new BulkRemoveContext(nodesToRemove.AsReadOnly(), parentNode, parentNode.Tree, cancellationToken);
+            await FireBulkNodesRemovedEvents(parentNode.GetType(), context);
+        }
+    }
+
+    // ========================================
+    // COPY OPERATIONS
+    // ========================================
+
+    public async Task<T> CopyContainerAsync<T>(
+        IRealTreeContainer source,
+        IRealTreeNode targetParent,
+        Guid? newId = null,
+        string? newName = null,
+        bool deep = false,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+        where T : IRealTreeContainer, new()
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var metadata = new Dictionary<string, object>(source.Metadata);
+        var copy = await AddContainerAsync<T>(
+            targetParent,
+            newId ?? Guid.NewGuid(),
+            newName ?? source.Name,
+            metadata,
+            triggerActions,
+            triggerEvents,
+            cancellationToken);
+
+        if (deep)
+        {
+            foreach (var childContainer in source.Containers)
+            {
+                await CopyContainerAsync(childContainer, copy, null, null, deep, cancellationToken);
+            }
+
+            foreach (var childItem in source.Items)
+            {
+                await CopyItemAsync(childItem, copy, null, null, deep, cancellationToken);
+            }
+        }
+
+        return copy;
+    }
+
+    public async Task<T> CopyItemAsync<T>(
+        IRealTreeItem source,
+        IRealTreeContainer targetParent,
+        Guid? newId = null,
+        string? newName = null,
+        bool deep = false,
+        bool triggerActions = true,
+        bool triggerEvents = true,
+        CancellationToken cancellationToken = default)
+        where T : IRealTreeItem, new()
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var metadata = new Dictionary<string, object>(source.Metadata);
+        var copy = await AddItemAsync<T>(
+            targetParent,
+            newId ?? Guid.NewGuid(),
+            newName ?? source.Name,
+            metadata,
+            triggerActions,
+            triggerEvents,
+            cancellationToken);
+
+        if (deep)
+        {
+            foreach (var childContainer in source.Containers)
+            {
+                await CopyContainerAsync(childContainer, copy, null, null, deep, cancellationToken);
+            }
+        }
+
+        return copy;
+    }
+
+    public async Task<IRealTreeContainer> CopyContainerAsync(
+        IRealTreeContainer source,
+        IRealTreeNode destination,
+        Guid? newId = null,
+        string? newName = null,
+        bool deep = true,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var metadata = new Dictionary<string, object>(source.Metadata);
+        var copy = await AddContainerAsync(destination, newId ?? Guid.NewGuid(), newName ?? source.Name, metadata, true, true, cancellationToken);
+
+        // Deep copy children if requested
+        if (deep)
+        {
+            foreach (var childContainer in source.Containers)
+            {
+                await CopyContainerAsync(childContainer, copy, null, null, deep, cancellationToken);
+            }
+
+            foreach (var childItem in source.Items)
+            {
+                await CopyItemAsync(childItem, copy, null, null, deep, cancellationToken);
+            }
+        }
+
+        return copy;
+    }
+
+    public async Task<IRealTreeItem> CopyItemAsync(
+        IRealTreeItem source,
+        IRealTreeContainer destination,
+        Guid? newId = null,
+        string? newName = null,
+        bool deep = true,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var metadata = new Dictionary<string, object>(source.Metadata);
+        var copy = await AddItemAsync(destination, newId ?? Guid.NewGuid(), newName ?? source.Name, metadata, true, true, cancellationToken);
+
+        // Deep copy child containers if requested
+        if (deep)
+        {
+            foreach (var childContainer in source.Containers)
+            {
+                await CopyContainerAsync(childContainer, copy, null, null, deep, cancellationToken);
+            }
+        }
+
+        return copy;
+    }
+
+    // ========================================
+    // QUERY OPERATIONS
+    // ========================================
+
+    public async Task<IReadOnlyList<IRealTreeNode>> ListAsync(
+        IRealTreeNode node,
         bool includeContainers = true,
         bool includeItems = true,
         bool recursive = false,
@@ -731,235 +1089,624 @@ public class RealTreeOperations : IRealTreeOperations
         bool triggerEvents = true,
         CancellationToken cancellationToken = default)
     {
-        var context = new ListContainerContext(container, includeContainers, includeItems, recursive, container.Tree, cancellationToken);
-        IReadOnlyList<IRealTreeNode> result;
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (triggerActions)
         {
-            result = await ExecuteListActionPipeline(context, container, node => GetListContainerActions(node), () => Task.FromResult(PerformListContainer(context)));
-        }
-        else
-        {
-            result = PerformListContainer(context);
+            await ExecuteListActions(node, cancellationToken);
         }
 
-        if (triggerEvents)
-        {
-            await ExecuteListEvents(context, result, container, node => GetContainerListedEvents(node));
-        }
-
-        return result;
-    }
-
-    // Helper method for list action pipeline execution
-    private async Task<IReadOnlyList<IRealTreeNode>> ExecuteListActionPipeline<TDelegate>(
-        ListContainerContext context,
-        IRealTreeNode startNode,
-        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates,
-        Func<Task<IReadOnlyList<IRealTreeNode>>> coreOperation)
-        where TDelegate : Delegate
-    {
-        var actions = CollectFromHierarchy(startNode, getDelegates);
-
-        if (actions.Count == 0)
-        {
-            return await coreOperation();
-        }
-
-        // Build middleware pipeline with result capture
-        IReadOnlyList<IRealTreeNode>? result = null;
-        var pipeline = actions.Aggregate(
-            async () => { result = await coreOperation(); },
-            (next, action) =>
-            {
-                return () => (Task)action.DynamicInvoke(context, next)!;
-            });
-
-        await pipeline();
-        return result ?? new List<IRealTreeNode>().AsReadOnly();
-    }
-
-    // Helper method for list event execution
-    private async Task ExecuteListEvents<TDelegate>(
-        ListContainerContext context,
-        IReadOnlyList<IRealTreeNode> result,
-        IRealTreeNode startNode,
-        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates)
-        where TDelegate : Delegate
-    {
-        var events = CollectFromHierarchy(startNode, getDelegates);
-
-        if (events.Count == 0)
-        {
-            return;
-        }
-
-        // Execute all events in parallel (fire-and-forget with error logging)
-        var tasks = events.Select(async eventDelegate =>
-        {
-            try
-            {
-                await (Task)eventDelegate.DynamicInvoke(context, result, context.CancellationToken)!;
-            }
-            catch (Exception ex)
-            {
-                // Log event execution errors but don't propagate them
-                _logger?.LogError(ex, "Event handler failed during {OperationType} operation", context.GetType().Name);
-            }
-        });
-
-        try
-        {
-            await Task.WhenAll(tasks);
-        }
-        catch
-        {
-            // Events are fire-and-forget, exceptions are already logged above
-        }
-    }
-
-    // Action delegate getter for list container
-    private IEnumerable<ListContainerDelegate> GetListContainerActions(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.ListContainerActions,
-            RealTreeItem item => item.ListContainerActions,
-            _ => Enumerable.Empty<ListContainerDelegate>()
-        };
-    }
-
-    // Event delegate getter for container listed
-    private IEnumerable<ContainerListedEventDelegate> GetContainerListedEvents(IRealTreeNode node)
-    {
-        return node switch
-        {
-            RealTreeContainer container => container.ContainerListedEvents,
-            RealTreeItem item => item.ContainerListedEvents,
-            _ => Enumerable.Empty<ContainerListedEventDelegate>()
-        };
-    }
-
-    // Core list operation implementation
-    private IReadOnlyList<IRealTreeNode> PerformListContainer(ListContainerContext context)
-    {
         var results = new List<IRealTreeNode>();
 
-        if (context.Recursive)
+        // Get containers from the node (both containers and items can have containers)
+        IReadOnlyList<IRealTreeContainer> containers = node switch
         {
-            // Recursive listing
-            CollectNodesRecursive(context.Container, results, context.IncludeContainers, context.IncludeItems);
+            IRealTreeContainer cont => cont.Containers,
+            IRealTreeItem item => item.Containers,
+            _ => Array.Empty<IRealTreeContainer>()
+        };
+
+        // Get items from the node (only containers have items)
+        IReadOnlyList<IRealTreeItem> items = node is IRealTreeContainer nodeAsContainer
+            ? nodeAsContainer.Items
+            : Array.Empty<IRealTreeItem>();
+
+        if (includeContainers)
+        {
+            results.AddRange(containers);
         }
-        else
+
+        if (includeItems)
         {
-            // Direct children only
-            if (context.IncludeContainers)
+            results.AddRange(items);
+        }
+
+        // Recursive traversal (happens regardless of includeContainers/includeItems)
+        if (recursive)
+        {
+            // Recurse into child containers
+            foreach (var child in containers)
             {
-                results.AddRange(context.Container.Containers);
+                var childResults = await ListAsync(child, includeContainers, includeItems, recursive, triggerActions, triggerEvents, cancellationToken);
+                results.AddRange(childResults);
             }
-            if (context.IncludeItems)
+
+            // Recurse into containers within items
+            foreach (var item in items)
             {
-                results.AddRange(context.Container.Items);
+                foreach (var childContainer in item.Containers)
+                {
+                    if (includeContainers)
+                    {
+                        results.Add(childContainer);
+                    }
+
+                    var childResults = await ListAsync(childContainer, includeContainers, includeItems, recursive, triggerActions, triggerEvents, cancellationToken);
+                    results.AddRange(childResults);
+                }
             }
+        }
+
+        // Fire events after successful listing
+        if (triggerEvents)
+        {
+            var context = new ListContainerContext(node, node.Tree, cancellationToken);
+            await FireContainerListedEvents(node.GetType(), context, results.AsReadOnly(), cancellationToken);
         }
 
         return results.AsReadOnly();
     }
 
-    // Helper for recursive collection
-    private void CollectNodesRecursive(IRealTreeContainer container, List<IRealTreeNode> results, bool includeContainers, bool includeItems)
-    {
-        if (includeContainers)
-        {
-            foreach (var childContainer in container.Containers)
-            {
-                results.Add(childContainer);
-                CollectNodesRecursive(childContainer, results, includeContainers, includeItems);
-            }
-        }
-
-        if (includeItems)
-        {
-            foreach (var item in container.Items)
-            {
-                results.Add(item);
-                // Items can have containers too, so recurse
-                foreach (var childContainer in item.Containers)
-                {
-                    results.Add(childContainer);
-                    CollectNodesRecursive(childContainer, results, includeContainers, includeItems);
-                }
-            }
-        }
-    }
-
-    // Show item operation implementation
     public async Task ShowItemAsync(
         IRealTreeItem item,
         bool triggerActions = true,
         bool triggerEvents = true,
         CancellationToken cancellationToken = default)
     {
-        var context = new ShowItemContext(item, item.Tree, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (triggerActions)
         {
-            await ExecuteActionPipeline(context, item, node => GetShowItemActions(node), () => Task.CompletedTask);
+            await ExecuteShowItemActions(item, cancellationToken);
         }
 
+        // Fire events after successful show
         if (triggerEvents)
         {
-            await ExecuteShowItemEvents(context, item, node => GetItemShownEvents(node));
+            var context = new ShowItemContext(item, item.Tree, cancellationToken);
+            await FireItemShownEvents(item.GetType(), context, cancellationToken);
         }
     }
 
-    // Helper method for show item event execution
-    private async Task ExecuteShowItemEvents<TDelegate>(
-        ShowItemContext context,
-        IRealTreeNode startNode,
-        Func<IRealTreeNode, IEnumerable<TDelegate>> getDelegates)
-        where TDelegate : Delegate
-    {
-        var events = CollectFromHierarchy(startNode, getDelegates);
+    // ========================================
+    // VALIDATION HELPERS
+    // ========================================
 
-        if (events.Count == 0)
+    private bool IsAncestorOf(IRealTreeNode node, IRealTreeNode potentialDescendant)
+    {
+        var current = node.Parent;
+        while (current != null)
+        {
+            if (current == potentialDescendant)
+            {
+                return true;
+            }
+
+            current = current.Parent;
+        }
+        return false;
+    }
+
+    // ========================================
+    // MIDDLEWARE EXECUTION HELPERS
+    // ========================================
+
+    private async Task ExecuteAddContainerActions(IRealTreeNode parent, IRealTreeContainer container, CancellationToken cancellationToken)
+    {
+        await ExecuteAddContainerActions(parent, container, cancellationToken, null);
+    }
+
+    private async Task ExecuteAddContainerActions(IRealTreeNode parent, IRealTreeContainer container, CancellationToken cancellationToken, IRealTreeTransaction? transaction)
+    {
+        var parentType = parent.GetType();
+        if (!_addContainerActionsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
         {
             return;
         }
 
-        // Execute all events in parallel (fire-and-forget with error logging)
-        var tasks = events.Select(async eventDelegate =>
+        var context = new AddContainerContext(container, parent, parent.Tree, cancellationToken, transaction);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteAddItemActions(IRealTreeContainer parent, IRealTreeItem item, CancellationToken cancellationToken)
+    {
+        var parentType = parent.GetType();
+        if (!_addItemActionsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var context = new AddItemContext(item, parent, parent.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteRemoveContainerActions(IRealTreeNode parent, IRealTreeContainer container, CancellationToken cancellationToken)
+    {
+        await ExecuteRemoveContainerActions(parent, container, cancellationToken, null);
+    }
+
+    private async Task ExecuteRemoveContainerActions(IRealTreeNode parent, IRealTreeContainer container, CancellationToken cancellationToken, IRealTreeTransaction? transaction)
+    {
+        var parentType = parent.GetType();
+        if (!_removeContainerActionsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        // Note: RemoveContainerContext constructor expects IRealTreeContainer for parent, but we're passing IRealTreeNode
+        // This is a type mismatch that needs to be resolved. For now, casting to satisfy the constructor.
+        var context = new RemoveContainerContext(container, (IRealTreeContainer)parent, parent.Tree, cancellationToken, transaction);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteRemoveItemActions(IRealTreeContainer parent, IRealTreeItem item, CancellationToken cancellationToken)
+    {
+        var parentType = parent.GetType();
+        if (!_removeItemActionsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var context = new RemoveItemContext(item, parent, parent.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteUpdateActions(IRealTreeNode node, string? newName, IDictionary<string, object>? metadata, CancellationToken cancellationToken)
+    {
+        var nodeType = node.GetType();
+        if (!_updateActionsByType.TryGetValue(nodeType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        // Capture old values before update
+        var oldName = node.Name;
+        var oldMetadata = metadata != null ? new Dictionary<string, object>(node.Metadata) : null;
+        var newMetadata = metadata != null ? new Dictionary<string, object>(metadata) : null;
+
+        var context = new UpdateContext(node, oldName, newName, oldMetadata, newMetadata, node.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+
+    private async Task ExecuteBulkAddContainerActions(IRealTreeNode parent, List<(Guid? id, string name, IDictionary<string, object>? metadata)> items, CancellationToken cancellationToken)
+    {
+        var parentType = parent.GetType();
+        if (!_bulkAddContainerActionsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        // Note: BulkAddContainerContext expects IReadOnlyList<IRealTreeContainer>, but we're called before items are created
+        // Passing empty list for now - this is a design issue that needs to be resolved
+        var context = new BulkAddContainerContext(Array.Empty<IRealTreeContainer>(), parent, parent.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteBulkAddItemActions(IRealTreeContainer parent, List<(Guid? id, string name, IDictionary<string, object>? metadata)> items, CancellationToken cancellationToken)
+    {
+        var parentType = parent.GetType();
+        if (!_bulkAddItemActionsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        // Note: BulkAddItemContext expects IReadOnlyList<IRealTreeItem>, but we're called before items are created
+        // Passing empty list for now - this is a design issue that needs to be resolved
+        var context = new BulkAddItemContext(Array.Empty<IRealTreeItem>(), parent, parent.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteBulkRemoveActions(IRealTreeNode parent, List<IRealTreeNode> nodes, CancellationToken cancellationToken)
+    {
+        var parentType = parent.GetType();
+        if (!_bulkRemoveActionsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var context = new BulkRemoveContext(nodes, parent, parent.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteListActions(IRealTreeNode node, CancellationToken cancellationToken)
+    {
+        var nodeType = node.GetType();
+        if (!_listContainerActionsByType.TryGetValue(nodeType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var context = new ListContainerContext(node, node.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    private async Task ExecuteShowItemActions(IRealTreeItem item, CancellationToken cancellationToken)
+    {
+        var itemType = item.GetType();
+        if (!_showItemActionsByType.TryGetValue(itemType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var context = new ShowItemContext(item, item.Tree, cancellationToken);
+
+        var index = 0;
+        async Task Next()
+        {
+            if (index < handlers.Count)
+            {
+                var handler = handlers[index++];
+                await handler(context, Next);
+            }
+        }
+
+        await Next();
+    }
+
+    // ========================================
+    // EVENT FIRING HELPER METHODS
+    // ========================================
+
+    private async Task FireContainerAddedEvents(Type parentType, AddContainerContext context)
+    {
+        if (!_containerAddedEventsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
         {
             try
             {
-                await (Task)eventDelegate.DynamicInvoke(context, context.CancellationToken)!;
+                return handler(context);
             }
             catch (Exception ex)
             {
-                // Log event execution errors but don't propagate them
-                _logger?.LogError(ex, "Event handler failed during {OperationType} operation", context.GetType().Name);
+                _logger?.LogError(ex, "Error in ContainerAdded event handler for type {Type}", parentType.Name);
+                return Task.CompletedTask;
             }
         });
 
-        try
-        {
-            await Task.WhenAll(tasks);
-        }
-        catch
-        {
-            // Events are fire-and-forget, exceptions are already logged above
-        }
+        await Task.WhenAll(tasks);
     }
 
-    // Action delegate getter for show item
-    private IEnumerable<ShowItemDelegate> GetShowItemActions(IRealTreeNode node)
+    private async Task FireContainerRemovedEvents(Type parentType, RemoveContainerContext context)
     {
-        return node is RealTreeItem item ? item.ShowItemActions : Enumerable.Empty<ShowItemDelegate>();
+        if (!_containerRemovedEventsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in ContainerRemoved event handler for type {Type}", parentType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
     }
 
-    // Event delegate getter for item shown
-    private IEnumerable<ItemShownEventDelegate> GetItemShownEvents(IRealTreeNode node)
+    private async Task FireItemAddedEvents(Type parentType, AddItemContext context)
     {
-        return node is RealTreeItem item ? item.ItemShownEvents : Enumerable.Empty<ItemShownEventDelegate>();
+        if (!_itemAddedEventsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in ItemAdded event handler for type {Type}", parentType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireItemRemovedEvents(Type parentType, RemoveItemContext context)
+    {
+        if (!_itemRemovedEventsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in ItemRemoved event handler for type {Type}", parentType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireNodeUpdatedEvents(Type nodeType, UpdateContext context)
+    {
+        if (!_nodeUpdatedEventsByType.TryGetValue(nodeType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in NodeUpdated event handler for type {Type}", nodeType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireNodeMovedEvents(Type nodeType, MoveContext context)
+    {
+        if (!_nodeMovedEventsByType.TryGetValue(nodeType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in NodeMoved event handler for type {Type}", nodeType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireBulkContainersAddedEvents(Type parentType, BulkAddContainerContext context)
+    {
+        if (!_bulkContainersAddedEventsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in BulkContainersAdded event handler for type {Type}", parentType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireBulkItemsAddedEvents(Type parentType, BulkAddItemContext context)
+    {
+        if (!_bulkItemsAddedEventsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in BulkItemsAdded event handler for type {Type}", parentType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireBulkNodesRemovedEvents(Type parentType, BulkRemoveContext context)
+    {
+        if (!_bulkNodesRemovedEventsByType.TryGetValue(parentType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in BulkNodesRemoved event handler for type {Type}", parentType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireContainerListedEvents(Type nodeType, ListContainerContext context, IReadOnlyList<IRealTreeNode> result, CancellationToken cancellationToken)
+    {
+        if (!_containerListedEventsByType.TryGetValue(nodeType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context, result, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in ContainerListed event handler for type {Type}", nodeType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FireItemShownEvents(Type itemType, ShowItemContext context, CancellationToken cancellationToken)
+    {
+        if (!_itemShownEventsByType.TryGetValue(itemType, out var handlers) || handlers.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = handlers.Select(handler =>
+        {
+            try
+            {
+                return handler(context, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in ItemShown event handler for type {Type}", itemType.Name);
+                return Task.CompletedTask;
+            }
+        });
+
+        await Task.WhenAll(tasks);
     }
 }
